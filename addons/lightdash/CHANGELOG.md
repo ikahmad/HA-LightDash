@@ -1,6 +1,23 @@
 # Changelog
 Only a few days old, and LightDash has already had a handful of feature requests and 8 pull requests with contributions from other users! Shout-out to `jcmuller` on GitHub, who contributed quality-of-development improvements to make it easier to work with as a developer, a few fixes for layout bugs and column support, and a bugfix for incorrect data parsing with some entity types. Thanks, Juan!
 
+## v0.10.10 (2026-06-03)
+- **Added:** `RELEASE.md` — user-friendly summary of changes since last release for populating release notes
+- **Changed:** `AGENTS.md` updated to require `RELEASE.md` maintenance with each version bump
+
+## v0.10.9 (2026-06-03)
+- **Added:** Timestamps to all console log output — lines now prefixed with `2026-06-03 12:34:56` for easier chrono-debugging
+
+## v0.10.8 (2026-06-03)
+- **Fixed:** App crash/stop with no error in logs — removed uvicorn `--reload` flag (was silently restarting when Python wrote `__pycache__` files)
+- **Fixed:** WebSocket events silently stop syncing — background listener now restarts on any unexpected exit
+- **Added:** Process-exit logging and shutdown lifecycle logs to distinguish graceful shutdown from hard kill
+- **Changed:** Max WebSocket reconnect delay reduced from 120s to 20s — faster recovery after network blips
+- **Changed:** Health check grace period increased (20s start, 5 retries) for slower HA hardware
+
+## v0.10.5 – v0.10.7 (2026-06-03)
+- **Added:** Sentry error tracking — unhandled exceptions and crashes now capture stack traces automatically for both local dev and addon deployments
+
 ## v0.10.4 (2026-05-31)
 - **Fixed:** External state changes (HA toggles) not updating the UI — SSE
   extension's `swap()` was silently a no-op because the entity-state span
