@@ -1,6 +1,9 @@
 # Changelog
 Lots of bugfixes, performance improvements and tweaks to reliability, especially around logging config for diagnostics and recovery when connections to the HA event queue crashes.
 
+## v0.10.13 (2026-06-03)
+- **Changed:** `RELEASE.md` consolidated — single section per release, no per-commit-version grouping; user-facing only
+
 ## v0.10.12 (2026-06-03)
 - **Added:** Configurable error diagnostics toggle ("Send error logs back to developer for diagnostics") — addon config checkbox, defaults to off
 - **Changed:** Sentry SDK init moved into `lifespan` so it reads configuration before activating

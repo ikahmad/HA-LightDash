@@ -1,53 +1,16 @@
 # Release Notes
 
-User-friendly summary of changes since the last release, written for end-users
-(not developers). Use this to populate release notes.
+User-facing summary of changes since the last release. One section per actual
+release to `main` — everything that changed, consolidated.
 
 ## v0.10.12 (2026-06-03)
 
-Privacy and configuration improvements.
+Reliability, logging, and privacy improvements.
 
-- Added a toggle in the addon config labelled "Send error logs back to developer for diagnostics" — off by default. Turn it on if asked to share crash data while troubleshooting.
-- Sentry crash reporting now reads the config before activating, so the toggle is respected immediately on restart.
-
----
-
-## v0.10.11 (2026-06-03)
-
-Logging improvements.
-
-- Added a log level dropdown to the addon config (DEBUG / INFO / WARNING / ERROR). Defaults to WARNING so logs are quieter day-to-day, but you can dial up to INFO or DEBUG when troubleshooting.
-- All log lines now consistently show timestamps, including uvicorn's own startup messages.
-
----
-
-## v0.10.10 (2026-06-03)
-
-Internal release infrastructure — no user-facing changes.
-
----
-
-## v0.10.9 (2026-06-03)
-
-Better log readability.
-
-- All log messages now include a timestamp so it's clear when events happened when sharing logs.
-
----
-
-## v0.10.8 (2026-06-03)
-
-Reliability improvements and better recovery after network issues.
-
-- Fixed mysterious app restarts — removed a development-mode file watcher that could trigger restarts for no apparent reason.
-- Fixed WebSocket connection drops — the addon now automatically reconnects and keeps live state updates flowing, even after network blips.
-- Added clear log messages when the addon shuts down gracefully vs. being killed.
-- Faster reconnection after network issues (up to 20s max delay instead of 2 minutes).
-
----
-
-## v0.10.5 – v0.10.7 (2026-06-03)
-
-Behind-the-scenes error tracking.
-
-- Added crash reporting so that if something goes wrong, error details are captured automatically to help diagnose issues.
+- **No more mysterious restarts.** Removed a development-mode file watcher that was triggering restarts in the addon.
+- **Live state updates stay connected.** If the WebSocket to Home Assistant drops, the addon now automatically reconnects.
+- **Faster recovery after network blips.** Max reconnect delay reduced from 2 minutes to 20 seconds.
+- **Clear shutdown logs.** You can now see whether the addon shut down gracefully or was killed.
+- **Log timestamps on every line.** All log messages include a timestamp, including uvicorn's own startup messages.
+- **Configurable log level.** Choose DEBUG, INFO, WARNING, or ERROR in the addon config — defaults to WARNING.
+- **Optional crash reporting.** New toggle in addon config labelled "Send error logs back to developer for diagnostics" — off by default. Turn it on if asked to share crash data while troubleshooting.
