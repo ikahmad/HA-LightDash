@@ -10,4 +10,4 @@ RELOAD="${RELOAD:-true}"
 export BASE_PATH HA_TOKEN HA_URL HOST PORT RELOAD
 
 mkdir -p data/dashboards
-exec python3 -m uvicorn app.main:app --host="$HOST" --port="$PORT" --reload
+exec python3 -m uvicorn app.main:app --host="$HOST" --port="$PORT"

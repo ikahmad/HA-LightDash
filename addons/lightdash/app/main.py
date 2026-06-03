@@ -4,6 +4,8 @@ import asyncio
 import html
 import json
 import logging
+import sys
+import atexit
 import urllib.parse
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -22,11 +24,21 @@ from app.config import AppConfig
 from app.ha_client import HAClient
 from app.parser import parse_dashboard
 from app.renderer import render_error, render_view, render_view_index
-from app.sse_manager import SSEManager, run_ha_websocket
+from app.sse_manager import SSEManager, run_ha_websocket_forever
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logging.getLogger("app.sse_manager").setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def _log_exit():
+    try:
+        logger.warning("LightDash process exiting")
+    except Exception:
+        sys.stderr.write("WARNING: LightDash process exiting (atexit, logger unavailable)\n")
+        sys.stderr.flush()
+atexit.register(_log_exit)
+
 
 APP_DIR = Path(__file__).parent
 
@@ -96,7 +108,15 @@ async def lifespan(app: FastAPI):
 
     logger.info("Starting HA WebSocket listener for %s", config.ha_url)
     sse = SSEManager()
-    task = asyncio.create_task(run_ha_websocket(config.ha_url, config.ha_token, sse))
+    ws_task = asyncio.create_task(
+        run_ha_websocket_forever(config.ha_url, config.ha_token, sse)
+    )
+
+    def _warn_ws_done(t: asyncio.Task):
+        if not t.cancelled() and t.exception() is not None:
+            logger.warning("WebSocket manager task failed: %s", t.exception())
+
+    ws_task.add_done_callback(_warn_ws_done)
 
     dashboards = AppConfig.load_dashboards(config.config_dir, config.is_addon)
     logger.info("Loaded %d dashboard(s)", len(dashboards))
@@ -125,19 +145,22 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    logger.info("Shutdown initiated — cancelling background tasks")
+
     watch_task.cancel()
     try:
         await watch_task
     except asyncio.CancelledError:
         pass
 
-    task.cancel()
+    ws_task.cancel()
     try:
-        await task
+        await ws_task
     except asyncio.CancelledError:
         pass
 
     await ha_client.disconnect()
+    logger.info("Shutdown complete")
 
 sentry_sdk.init(
     dsn="https://7dd83515f99eff25c8f24ebee7c4c9f5@o4511500507611136.ingest.de.sentry.io/4511500514492496",
