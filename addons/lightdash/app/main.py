@@ -15,6 +15,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+import sentry_sdk
+
 from app.compat import collect_entities, scan_dashboard
 from app.config import AppConfig
 from app.ha_client import HAClient
@@ -137,6 +139,23 @@ async def lifespan(app: FastAPI):
 
     await ha_client.disconnect()
 
+sentry_sdk.init(
+    dsn="https://7dd83515f99eff25c8f24ebee7c4c9f5@o4511500507611136.ingest.de.sentry.io/4511500514492496",
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    send_default_pii=True,
+    # Enable sending logs to Sentry
+    enable_logs=True,
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for tracing.
+    traces_sample_rate=1.0,
+    # Set profile_session_sample_rate to 1.0 to profile 100%
+    # of profile sessions.
+    profile_session_sample_rate=1.0,
+    # Set profile_lifecycle to "trace" to automatically
+    # run the profiler on when there is an active transaction
+    profile_lifecycle="trace",
+)
 
 app = FastAPI(lifespan=lifespan, title="LightDash", version="0.1.0")
 
@@ -205,6 +224,9 @@ async def root():
         headers=_no_cache,
     )
 
+@app.get("/sentry-debug")
+async def trigger_error():
+    division_by_zero = 1 / 0
 
 @app.get("/d/{name}")
 async def dashboard_index(name: str):
