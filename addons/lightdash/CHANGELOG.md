@@ -1,5 +1,32 @@
 # Changelog
-Only a few days old, and LightDash has already had a handful of feature requests and 8 pull requests with contributions from other users! Shout-out to `jcmuller` on GitHub, who contributed quality-of-development improvements to make it easier to work with as a developer, a few fixes for layout bugs and column support, and a bugfix for incorrect data parsing with some entity types. Thanks, Juan!
+Lots of bugfixes, performance improvements and tweaks to reliability, especially around logging config for diagnostics and recovery when connections to the HA event queue crashes.
+
+## v0.10.12 (2026-06-03)
+- **Added:** Configurable error diagnostics toggle ("Send error logs back to developer for diagnostics") — addon config checkbox, defaults to off
+- **Changed:** Sentry SDK init moved into `lifespan` so it reads configuration before activating
+- **Added:** Translations entry for `diagnostics` config key
+
+## v0.10.11 (2026-06-03)
+- **Added:** Configurable log level via addon config dropdown (`log_level` — `DEBUG|INFO|WARNING|ERROR`, default `WARNING`)
+- **Fixed:** Timestamp format now consistently applied to all loggers including uvicorn's own output
+- **Fixed:** `app.sse_manager` no longer pinned to INFO — respects root log level
+
+## v0.10.10 (2026-06-03)
+- **Added:** `RELEASE.md` — user-friendly summary of changes since last release for populating release notes
+- **Changed:** `AGENTS.md` updated to require `RELEASE.md` maintenance with each version bump
+
+## v0.10.9 (2026-06-03)
+- **Added:** Timestamps to all console log output — lines now prefixed with `2026-06-03 12:34:56` for easier chrono-debugging
+
+## v0.10.8 (2026-06-03)
+- **Fixed:** App crash/stop with no error in logs — removed uvicorn `--reload` flag (was silently restarting when Python wrote `__pycache__` files)
+- **Fixed:** WebSocket events silently stop syncing — background listener now restarts on any unexpected exit
+- **Added:** Process-exit logging and shutdown lifecycle logs to distinguish graceful shutdown from hard kill
+- **Changed:** Max WebSocket reconnect delay reduced from 120s to 20s — faster recovery after network blips
+- **Changed:** Health check grace period increased (20s start, 5 retries) for slower HA hardware
+
+## v0.10.5 – v0.10.7 (2026-06-03)
+- **Added:** Sentry error tracking — unhandled exceptions and crashes now capture stack traces automatically for both local dev and addon deployments
 
 ## v0.10.4 (2026-05-31)
 - **Fixed:** External state changes (HA toggles) not updating the UI — SSE

@@ -3,3 +3,5 @@ configuration:
     name: Dashboard name (used in URL)
     title: Display title
     yaml: Dashboard YAML configuration
+  diagnostics:
+    name: Send error logs back to developer for diagnostics

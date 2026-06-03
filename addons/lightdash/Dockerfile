@@ -8,7 +8,7 @@ COPY run.sh /
 
 RUN chmod a+x /run.sh
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=5 \
     CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 WORKDIR /app

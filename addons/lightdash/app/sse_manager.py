@@ -77,7 +77,7 @@ async def run_ha_websocket(ha_url: str, ha_token: str, sse: SSEManager):
 
     msg_id = 0
     delay = 5.0
-    max_delay = 120.0
+    max_delay = 20.0
 
     while True:
         try:
@@ -151,3 +151,22 @@ async def run_ha_websocket(ha_url: str, ha_token: str, sse: SSEManager):
 
         await asyncio.sleep(delay)
         delay = min(delay * 1.5 + random.uniform(0, delay * 0.25), max_delay)
+
+
+async def run_ha_websocket_forever(
+    ha_url: str, ha_token: str, sse: SSEManager
+) -> None:
+    delay = 1.0
+    while True:
+        try:
+            await run_ha_websocket(ha_url, ha_token, sse)
+        except asyncio.CancelledError:
+            logger.info("WebSocket manager cancelled — exiting")
+            raise
+        except Exception:
+            logger.exception("WebSocket listener crashed unexpectedly")
+        else:
+            logger.warning("WebSocket listener stopped unexpectedly")
+        logger.info("Restarting WebSocket listener in %.1fs", delay)
+        await asyncio.sleep(delay)
+        delay = min(delay * 2, 30.0)

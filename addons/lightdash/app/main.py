@@ -4,6 +4,8 @@ import asyncio
 import html
 import json
 import logging
+import sys
+import atexit
 import urllib.parse
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -15,16 +17,37 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+import sentry_sdk
+
 from app.compat import collect_entities, scan_dashboard
 from app.config import AppConfig
 from app.ha_client import HAClient
 from app.parser import parse_dashboard
 from app.renderer import render_error, render_view, render_view_index
-from app.sse_manager import SSEManager, run_ha_websocket
+from app.sse_manager import SSEManager, run_ha_websocket_forever
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-logging.getLogger("app.sse_manager").setLevel(logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
+_fmt = logging.Formatter("%(asctime)s %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+for _log_name in ("", "uvicorn", "uvicorn.error", "uvicorn.access"):
+    for _h in logging.getLogger(_log_name).handlers:
+        _h.setFormatter(_fmt)
+
 logger = logging.getLogger(__name__)
+
+
+def _log_exit():
+    try:
+        logger.warning("LightDash process exiting")
+    except Exception:
+        sys.stderr.write("WARNING: LightDash process exiting (atexit, logger unavailable)\n")
+        sys.stderr.flush()
+atexit.register(_log_exit)
+
 
 APP_DIR = Path(__file__).parent
 
@@ -86,6 +109,23 @@ def _rebuild_entity_filter(dashboards: dict, sse: SSEManager) -> None:
 async def lifespan(app: FastAPI):
     config = AppConfig.from_env()
 
+    level = getattr(logging, config.log_level.upper(), logging.WARNING)
+    logging.getLogger().setLevel(level)
+    logger.info("Log level set to %s", config.log_level)
+
+    if config.diagnostics:
+        sentry_sdk.init(
+            dsn="https://7dd83515f99eff25c8f24ebee7c4c9f5@o4511500507611136.ingest.de.sentry.io/4511500514492496",
+            send_default_pii=True,
+            enable_logs=True,
+            traces_sample_rate=1.0,
+            profile_session_sample_rate=1.0,
+            profile_lifecycle="trace",
+        )
+        logger.info("Error diagnostics enabled — crash reports sent to developer")
+    else:
+        logger.info("Error diagnostics disabled")
+
     ha_client = HAClient(config.ha_url, config.ha_token)
     connected = await ha_client.connect()
 
@@ -94,7 +134,15 @@ async def lifespan(app: FastAPI):
 
     logger.info("Starting HA WebSocket listener for %s", config.ha_url)
     sse = SSEManager()
-    task = asyncio.create_task(run_ha_websocket(config.ha_url, config.ha_token, sse))
+    ws_task = asyncio.create_task(
+        run_ha_websocket_forever(config.ha_url, config.ha_token, sse)
+    )
+
+    def _warn_ws_done(t: asyncio.Task):
+        if not t.cancelled() and t.exception() is not None:
+            logger.warning("WebSocket manager task failed: %s", t.exception())
+
+    ws_task.add_done_callback(_warn_ws_done)
 
     dashboards = AppConfig.load_dashboards(config.config_dir, config.is_addon)
     logger.info("Loaded %d dashboard(s)", len(dashboards))
@@ -123,20 +171,22 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    logger.info("Shutdown initiated — cancelling background tasks")
+
     watch_task.cancel()
     try:
         await watch_task
     except asyncio.CancelledError:
         pass
 
-    task.cancel()
+    ws_task.cancel()
     try:
-        await task
+        await ws_task
     except asyncio.CancelledError:
         pass
 
     await ha_client.disconnect()
-
+    logger.info("Shutdown complete")
 
 app = FastAPI(lifespan=lifespan, title="LightDash", version="0.1.0")
 
@@ -205,6 +255,9 @@ async def root():
         headers=_no_cache,
     )
 
+@app.get("/sentry-debug")
+async def trigger_error():
+    division_by_zero = 1 / 0
 
 @app.get("/d/{name}")
 async def dashboard_index(name: str):
