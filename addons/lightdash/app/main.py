@@ -105,6 +105,24 @@ def _rebuild_entity_filter(dashboards: dict, sse: SSEManager) -> None:
     )
 
 
+async def _heartbeat(sse: SSEManager) -> None:
+    import os, time
+
+    start = time.monotonic()
+    while True:
+        await asyncio.sleep(300)
+        try:
+            rss = int(Path(f"/proc/{os.getpid()}/status").read_text().split("VmRSS:")[1].split()[0])
+        except Exception:
+            rss = -1
+        logger.info(
+            "Heartbeat: uptime=%dm rss=%dKB sse_clients=%d",
+            (time.monotonic() - start) / 60,
+            rss,
+            len(sse._clients),
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     config = AppConfig.from_env()
@@ -166,6 +184,7 @@ async def lifespan(app: FastAPI):
     watch_task = asyncio.create_task(
         _watch_dashboard_files(Path(config.config_dir), dashboards, sse)
     )
+    heartbeat_task = asyncio.create_task(_heartbeat(sse))
 
     _rebuild_entity_filter(dashboards, sse)
 
@@ -176,6 +195,12 @@ async def lifespan(app: FastAPI):
     watch_task.cancel()
     try:
         await watch_task
+    except asyncio.CancelledError:
+        pass
+
+    heartbeat_task.cancel()
+    try:
+        await heartbeat_task
     except asyncio.CancelledError:
         pass
 

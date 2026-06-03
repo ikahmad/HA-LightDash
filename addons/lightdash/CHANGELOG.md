@@ -1,6 +1,10 @@
 # Changelog
 Lots of bugfixes, performance improvements and tweaks to reliability, especially around logging config for diagnostics and recovery when connections to the HA event queue crashes.
 
+## v0.10.14 (2026-06-03)
+- **Fixed:** OOM crash from unbounded SSE queues — each client queue capped at 256 messages, slow/disconnected clients dropped automatically
+- **Added:** Periodic heartbeat log (every 5 min) with RSS, uptime, and SSE client count to detect memory growth before OOM
+
 ## v0.10.13 (2026-06-03)
 - **Changed:** `RELEASE.md` consolidated — single section per release, no per-commit-version grouping; user-facing only
 
