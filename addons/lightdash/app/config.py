@@ -23,6 +23,7 @@ class AppConfig:
     base_path: str = ""
     public_host: str = ""
     public_port: str = ""
+    log_level: str = "WARNING"
 
     _options_cache: dict = field(default_factory=dict, repr=False)
 
@@ -70,6 +71,7 @@ class AppConfig:
             options = cls._load_options()
             public_host = options.get("public_host", "") or cls._resolve_public_host(ha_token)
             public_port = options.get("public_port", "") or "8001"
+            log_level = options.get("log_level", "WARNING")
         else:
             ha_url = os.getenv("HA_URL", "")
             ha_token = os.getenv("HA_TOKEN", "")
@@ -79,6 +81,7 @@ class AppConfig:
             config_dir = os.getenv("CONFIG_DIR", "config")
             public_host = os.getenv("PUBLIC_HOST", "")
             public_port = os.getenv("PUBLIC_PORT", "")
+            log_level = os.getenv("LOG_LEVEL", "WARNING")
 
         return cls(
             ha_url=ha_url,
@@ -91,6 +94,7 @@ class AppConfig:
             base_path=base_path,
             public_host=public_host,
             public_port=public_port,
+            log_level=log_level,
             _options_cache=options if is_addon else {},
         )
 

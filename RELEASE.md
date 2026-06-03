@@ -3,9 +3,11 @@
 This file contains a user-friendly summary of changes since the last release,
 written for end-users (not developers). Use this to populate release notes.
 
-## v0.10.10 (2026-06-03)
+## v0.10.11 (2026-06-03)
 
-Nothing user-facing — internal release infrastructure.
+**You can now control log verbosity.** Head to the LightDash addon configuration page in Home Assistant to choose from DEBUG, INFO, WARNING, or ERROR. Defaults to WARNING — less noise in your addon logs, but you can dial up to INFO or DEBUG when troubleshooting.
+
+**Better log consistency.** All log lines from LightDash now include timestamps, even uvicorn's own startup messages and access logs — no more guessing when something happened.
 
 ---
 

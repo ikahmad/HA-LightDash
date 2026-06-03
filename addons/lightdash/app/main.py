@@ -31,7 +31,12 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-logging.getLogger("app.sse_manager").setLevel(logging.INFO)
+
+_fmt = logging.Formatter("%(asctime)s %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+for _log_name in ("", "uvicorn", "uvicorn.error", "uvicorn.access"):
+    for _h in logging.getLogger(_log_name).handlers:
+        _h.setFormatter(_fmt)
+
 logger = logging.getLogger(__name__)
 
 
@@ -103,6 +108,10 @@ def _rebuild_entity_filter(dashboards: dict, sse: SSEManager) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     config = AppConfig.from_env()
+
+    level = getattr(logging, config.log_level.upper(), logging.WARNING)
+    logging.getLogger().setLevel(level)
+    logger.info("Log level set to %s", config.log_level)
 
     ha_client = HAClient(config.ha_url, config.ha_token)
     connected = await ha_client.connect()
