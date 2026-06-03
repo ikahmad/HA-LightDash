@@ -1,5 +1,5 @@
 # Changelog
-Only a few days old, and LightDash has already had a handful of feature requests and 8 pull requests with contributions from other users! Shout-out to `jcmuller` on GitHub, who contributed quality-of-development improvements to make it easier to work with as a developer, a few fixes for layout bugs and column support, and a bugfix for incorrect data parsing with some entity types. Thanks, Juan!
+Lots of bugfixes, performance improvements and tweaks to reliability, especially around logging config for diagnostics and recovery when connections to the HA event queue crashes.
 
 ## v0.10.12 (2026-06-03)
 - **Added:** Configurable error diagnostics toggle ("Send error logs back to developer for diagnostics") — addon config checkbox, defaults to off
