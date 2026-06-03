@@ -762,7 +762,7 @@ html, body {
   color: #aaa;
 }
 
-/* ----- Dimmer Modal ----- */
+/* ----- Dimmer Modal (long-press light control) ----- */
 .dimmer-modal {
   display: flex;
   align-items: center;
@@ -770,59 +770,59 @@ html, body {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: rgba(0,0,0,0.65);
+  background: rgba(0,0,0,0.62);
   -webkit-tap-highlight-color: transparent;
+  animation: dimmer-fade .18s ease;
 }
 .dimmer-content {
   background: #1e1e1e;
-  border-radius: 20px;
+  border-radius: 24px;
   width: 90vw;
   max-width: 340px;
-  padding: 12px;
+  padding: 20px 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 18px;
+  box-shadow: 0 20px 60px -20px rgba(0,0,0,0.7);
+  animation: dimmer-pop .2s cubic-bezier(.2,.8,.3,1);
 }
 .dimmer-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
 }
 .dimmer-name {
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: #eee;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
-  top:-0.8rem;
-  left:0.5rem;
-  position: relative;
+  min-width: 0;
 }
 .dimmer-close {
-  width: 64px;
-  height: 64px;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
   border: none;
   border-radius: 50%;
   background: #2a2a2a;
   color: #ccc;
-  font-size: 2.8rem;
+  font-size: 1.25rem;
+  line-height: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
   padding: 0;
-  line-height: 0.8;
 }
-.dimmer-close:active {
-  background: #3a3a3a;
-}
+.dimmer-close:active { background: #3a3a3a; }
 .dimmer-body {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   gap: 28px;
   padding: 4px 0;
@@ -832,30 +832,13 @@ html, body {
   align-items: center;
   justify-content: center;
 }
-.dimmer-right {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  width: 64px;
-  flex-shrink: 0;
-}
-.dimmer-icon {
-  cursor: pointer;
-}
-.dimmer-icon svg {
-  width: 48px;
-  height: 48px;
-  fill: var(--tile-color, #4fc3f7);
-  color: var(--tile-color, #4fc3f7);
-  display: block;
-}
 .dimmer-track {
   position: relative;
-  width: 88px;
-  height: 220px;
+  width: 92px;
+  height: 230px;
+  overflow: hidden;
   background: #333;
-  border-radius: 15px;
+  border-radius: 20px;
   cursor: pointer;
   touch-action: none;
 }
@@ -864,16 +847,81 @@ html, body {
   bottom: 0;
   left: 0;
   width: 100%;
-  border-radius: 15px;
+  border-radius: 0;
   background: #F6C344;
 }
+.dimmer-fill::after {
+  content: '';
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 34px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.28);
+}
+.dimmer-thumb {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 34px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.28);
+}
+.dimmer-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  width: 72px;
+  flex-shrink: 0;
+  padding-bottom: 6px;
+}
+.dimmer-icon {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+}
+.dimmer-icon:active { filter: brightness(0.85); }
+.dimmer-icon svg {
+  width: 44px;
+  height: 44px;
+  fill: var(--tile-color, #4fc3f7);
+  color: var(--tile-color, #4fc3f7);
+  display: block;
+}
 .dimmer-pct {
-  font-size: 1.3rem;
-  font-weight: 600;
+  font-size: 1.5rem;
+  font-weight: 700;
   color: #eee;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+.dimmer-off-btn {
+  border: none;
+  border-radius: 999px;
+  background: #2a2a2a;
+  color: #ccc;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.dimmer-off-btn.is-on { background: #c44; color: #fff; }
+.dimmer-off-btn.is-off { background: #2a5a2a; color: #8c8; }
+.dimmer-off-btn:active { filter: brightness(0.85); }
+@keyframes dimmer-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dimmer-pop { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
+
 @keyframes pulse-border {
   0% { box-shadow: 0 0 0 0 rgba(79,195,247,0.4); }
   70% { box-shadow: 0 0 0 6px rgba(79,195,247,0); }

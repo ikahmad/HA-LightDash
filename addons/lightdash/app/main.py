@@ -24,7 +24,7 @@ from app.compat import collect_entities, scan_dashboard
 from app.config import AppConfig
 from app.ha_client import HAClient
 from app.parser import parse_dashboard
-from app.renderer import render_error, render_view, render_view_index
+from app.renderer import _css_link, render_error, render_view, render_view_index
 from app.sse_manager import SSEManager, run_ha_websocket_forever
 
 logging.basicConfig(
@@ -266,7 +266,6 @@ async def detect_ingress(request: Request, call_next):
 async def root():
     bp = _bp()
     dashboards = getattr(app.state, "dashboards", {})
-    css = bp + "/static/style.css" if bp else "/static/style.css"
 
     items = ""
     if dashboards:
@@ -282,7 +281,7 @@ async def root():
         '<html lang="en">'
         '<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">'
         '<title>LightDash</title>'
-        '<link rel="stylesheet" href="' + css + '">'
+        + _css_link()
         + _SW_SCRIPT +
         '</head>'
         '<body>'
@@ -561,9 +560,9 @@ views:
 @app.get("/_config", response_class=HTMLResponse)
 async def config_page():
     bp = _bp()
-    css = bp + "/static/style.css" if bp else "/static/style.css"
     cfg = getattr(app.state, "config", None)
     public_base = cfg.public_base if cfg and cfg.public_base else ""
+    css_link = _css_link()
 
     return HTMLResponse(f"""\
 <!DOCTYPE html>
@@ -572,7 +571,7 @@ async def config_page():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>LightDash Config</title>
-<link rel="stylesheet" href="{css}">
+{css_link}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.css">
 <style>
   #config-layout {{
@@ -1187,7 +1186,7 @@ async def config_preview(req: Request):
 
     return HTMLResponse(
         '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width,initial-scale=1.0">\n<title>Preview</title>\n'
-        '<link rel="stylesheet" href="' + (bp + "/static/style.css" if bp else "/static/style.css") + '">\n'
+        + _css_link(dashboard.lightdash.theme)
         + _SW_SCRIPT + '\n'
         + '</head>\n<body>\n'
         + top_bar +

@@ -48,6 +48,7 @@ class View:
 class LightdashConfig:
     container_width: str = ""
     container_height: str = ""
+    theme: str = "ha-dark"
 
 
 @dataclass

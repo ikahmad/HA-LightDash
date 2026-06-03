@@ -27,6 +27,7 @@ def parse_dashboard(raw: Dict[str, Any]) -> Dashboard:
         dashboard.lightdash = LightdashConfig(
             container_width=ld.get("container_width", ""),
             container_height=ld.get("container_height", ""),
+            theme=ld.get("theme", "ha-dark"),
         )
     for vd in raw_views:
         if not isinstance(vd, dict):
