@@ -147,6 +147,14 @@ html, body {
   fill: currentColor;
   color: var(--state-color, #999);
 }
+.entity-row.no-icon .entity-info {
+  margin-left: 0;
+}
+
+.entity-info {
+  margin-left: 0;
+}
+
 .entity-info {
   flex: 1;
   min-width: 0;

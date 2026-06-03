@@ -1,6 +1,10 @@
 # Changelog
 Light dimmer modal for light entities, CSS theme support, and dimmer UX refinement.
 
+## v0.10.17 (2026-06-04)
+- **Added:** `icon: none` support on entity items in entities cards — hides the icon, name/state align left naturally (no -offset needed)
+- **Added:** `.entity-row.no-icon` CSS class across all 10 theme files for theme-level styling hooks
+
 ## v0.10.16 (2026-06-04)
 - **Added:** Long-press dimmer modal on light entity tiles and entity rows — vertical brightness slider, icon tap toggles on/off, shows entity name and current brightness percent
 - **Added:** CSS theme system — new `lightdash.theme` key in dashboard YAML selects a theme CSS file (default `ha-dark`); themes are drop-in replacements sharing identical class structure

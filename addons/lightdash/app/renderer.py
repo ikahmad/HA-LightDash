@@ -899,7 +899,8 @@ def _render_entities(card: Card, indent: int = 2) -> str:
             eicon = ent.get("icon", "")
         else:
             continue
-        icon = _icon_html(_entity_icon(eid, eicon), 18)
+        icon_hidden = eicon == "none"
+        icon = "" if icon_hidden else _icon_html(_entity_icon(eid, eicon), 18)
         state_span = _entity_span(eid, indent=indent + 3)
         type_attr = ent.get("type", "") if isinstance(ent, dict) else ""
         divider = ""
@@ -911,7 +912,7 @@ def _render_entities(card: Card, indent: int = 2) -> str:
             rows += _SP * (indent + 1) + '<div class="entities-section-header">' + section + '</div>\n'
             continue
         row_controls = _render_cover_controls(eid, indent + 2) or _render_entity_toggle(eid, indent + 2)
-        row_attrs: Dict[str, str] = {"class": "entity-row"}
+        row_attrs: Dict[str, str] = {"class": "entity-row" + (" no-icon" if icon_hidden else "")}
         state_color = _icon_color_for_state(eid) if eid else ""
         if state_color:
             row_attrs["style"] = "--state-color: " + state_color
@@ -928,7 +929,7 @@ def _render_entities(card: Card, indent: int = 2) -> str:
             })
         rows += (
             _SP * (indent + 1) + '<div' + _build_attrs(row_attrs) + '>\n'
-            + _SP * (indent + 2) + '<div class="entity-icon">' + icon + '</div>\n'
+            + ('' if icon_hidden else _SP * (indent + 2) + '<div class="entity-icon">' + icon + '</div>\n')
             + _SP * (indent + 2) + '<div class="entity-info">\n'
             + _SP * (indent + 3) + '<div class="entity-name">' + html.escape(ename) + '</div>\n'
             + _SP * (indent + 3) + state_span + '\n'

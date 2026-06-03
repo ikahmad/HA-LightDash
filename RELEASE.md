@@ -1,3 +1,9 @@
+# Release Notes for v0.10.17 (2026-06-04)
+
+This release adds the ability to hide entity icons in entities cards for a cleaner, more compact look.
+
+- **Hide entity icons:** Set `icon: none` on any entity item in an entities card and the icon disappears. The entity name and state naturally shift to the left edge for a compact, text-only row.
+
 # Release Notes for v0.10.15 (2026-06-03)
 
 This release adds better diagnostics for tracking down why the addon occasionally stops with no error logged.

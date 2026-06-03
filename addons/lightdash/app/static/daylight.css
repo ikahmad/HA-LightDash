@@ -141,6 +141,14 @@ html, body {
 .entity-row { display: flex; align-items: center; gap: 10px; min-height: 40px; }
 .entity-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .entity-icon svg { fill: var(--state-color, var(--icon-neutral)); color: var(--state-color, var(--icon-neutral)); }
+.entity-row.no-icon .entity-info {
+  margin-left: 0;
+}
+
+.entity-info {
+  margin-left: 0;
+}
+
 .entity-info { flex: 1; min-width: 0; }
 .entity-name { font-size: 0.92rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .entity-state { font-size: 0.8rem; color: var(--text-faint); font-variant-numeric: tabular-nums; font-family: var(--font-data, inherit); }
