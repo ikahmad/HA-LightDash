@@ -6,6 +6,7 @@ import json
 import logging
 import sys
 import atexit
+import signal
 import urllib.parse
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -23,7 +24,7 @@ from app.compat import collect_entities, scan_dashboard
 from app.config import AppConfig
 from app.ha_client import HAClient
 from app.parser import parse_dashboard
-from app.renderer import render_error, render_view, render_view_index
+from app.renderer import _css_link, render_error, render_view, render_view_index
 from app.sse_manager import SSEManager, run_ha_websocket_forever
 
 logging.basicConfig(
@@ -47,6 +48,13 @@ def _log_exit():
         sys.stderr.write("WARNING: LightDash process exiting (atexit, logger unavailable)\n")
         sys.stderr.flush()
 atexit.register(_log_exit)
+
+
+for _sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+    signal.signal(
+        _sig,
+        lambda s, f: logger.warning("Received signal %d (%s)", s, signal.Signals(s).name),
+    )
 
 
 APP_DIR = Path(__file__).parent
@@ -105,9 +113,37 @@ def _rebuild_entity_filter(dashboards: dict, sse: SSEManager) -> None:
     )
 
 
+async def _heartbeat(sse: SSEManager) -> None:
+    import os, time
+
+    start = time.monotonic()
+    first = True
+    while True:
+        await asyncio.sleep(60 if first else 300)
+        first = False
+        try:
+            rss = int(Path(f"/proc/{os.getpid()}/status").read_text().split("VmRSS:")[1].split()[0])
+        except Exception:
+            rss = -1
+        logger.info(
+            "Heartbeat: uptime=%dm rss=%dKB sse_clients=%d",
+            (time.monotonic() - start) / 60,
+            rss,
+            len(sse._clients),
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     config = AppConfig.from_env()
+
+    sys.excepthook = lambda t, v, tb: logger.critical(
+        "Unhandled exception", exc_info=(t, v, tb)
+    )
+    loop = asyncio.get_running_loop()
+    loop.set_exception_handler(
+        lambda l, ctx: logger.critical("asyncio exception: %s", ctx)
+    )
 
     level = getattr(logging, config.log_level.upper(), logging.WARNING)
     logging.getLogger().setLevel(level)
@@ -166,6 +202,7 @@ async def lifespan(app: FastAPI):
     watch_task = asyncio.create_task(
         _watch_dashboard_files(Path(config.config_dir), dashboards, sse)
     )
+    heartbeat_task = asyncio.create_task(_heartbeat(sse))
 
     _rebuild_entity_filter(dashboards, sse)
 
@@ -176,6 +213,12 @@ async def lifespan(app: FastAPI):
     watch_task.cancel()
     try:
         await watch_task
+    except asyncio.CancelledError:
+        pass
+
+    heartbeat_task.cancel()
+    try:
+        await heartbeat_task
     except asyncio.CancelledError:
         pass
 
@@ -223,7 +266,6 @@ async def detect_ingress(request: Request, call_next):
 async def root():
     bp = _bp()
     dashboards = getattr(app.state, "dashboards", {})
-    css = bp + "/static/style.css" if bp else "/static/style.css"
 
     items = ""
     if dashboards:
@@ -239,7 +281,7 @@ async def root():
         '<html lang="en">'
         '<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">'
         '<title>LightDash</title>'
-        '<link rel="stylesheet" href="' + css + '">'
+        + _css_link()
         + _SW_SCRIPT +
         '</head>'
         '<body>'
@@ -518,9 +560,9 @@ views:
 @app.get("/_config", response_class=HTMLResponse)
 async def config_page():
     bp = _bp()
-    css = bp + "/static/style.css" if bp else "/static/style.css"
     cfg = getattr(app.state, "config", None)
     public_base = cfg.public_base if cfg and cfg.public_base else ""
+    css_link = _css_link()
 
     return HTMLResponse(f"""\
 <!DOCTYPE html>
@@ -529,7 +571,7 @@ async def config_page():
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>LightDash Config</title>
-<link rel="stylesheet" href="{css}">
+{css_link}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.css">
 <style>
   #config-layout {{
@@ -1144,7 +1186,7 @@ async def config_preview(req: Request):
 
     return HTMLResponse(
         '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width,initial-scale=1.0">\n<title>Preview</title>\n'
-        '<link rel="stylesheet" href="' + (bp + "/static/style.css" if bp else "/static/style.css") + '">\n'
+        + _css_link(dashboard.lightdash.theme)
         + _SW_SCRIPT + '\n'
         + '</head>\n<body>\n'
         + top_bar +

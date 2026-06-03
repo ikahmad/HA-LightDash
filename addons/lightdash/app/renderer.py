@@ -53,6 +53,13 @@ _DEFAULT_ICONS: Dict[str, str] = {
     "humidifier": "mdi:water-percent",
 }
 
+_DEFAULT_THEME = "ha-dark"
+
+def _css_link(theme: str = "") -> str:
+    if not theme:
+        theme = _DEFAULT_THEME
+    return '<link rel="stylesheet" href="' + _url(f"/static/{theme}.css") + '">\n'
+
 _entity_icons: Dict[str, str] = {}
 _entity_states: Dict[str, Any] = {}
 _ha_url: str = ""
@@ -223,6 +230,135 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
              '</script>\n'
         )
 
+    dimmer_html = ""
+
+    if _view_needs_light_dimmer(view):
+        dimmer_html = (
+            '<div id="dimmer-modal" class="dimmer-modal" style="display:none">\n'
+            '<div class="dimmer-content">\n'
+            '<div class="dimmer-header">\n'
+            '<span class="dimmer-name" id="dimmer-name"></span>\n'
+            '<button class="dimmer-close" id="dimmer-close-btn">&#x2715;</button>\n'
+            '</div>\n'
+            '<div class="dimmer-body">\n'
+            '<div class="dimmer-slider-wrap">\n'
+            '<div class="dimmer-track" id="dimmer-track">\n'
+            '<div class="dimmer-fill" id="dimmer-fill"></div>\n'
+            '</div>\n'
+            '</div>\n'
+            '<div class="dimmer-right">\n'
+            '<div class="dimmer-icon" id="dimmer-icon"></div>\n'
+            '<span class="dimmer-pct" id="dimmer-pct">0%</span>\n'
+            '</div>\n'
+            '</div>\n'
+            '</div>\n'
+            '</div>\n'
+        )
+
+        dimmer_js = (
+            '<script>\n'
+            'document.addEventListener("DOMContentLoaded",function(){\n'
+            'var m=document.getElementById("dimmer-modal");\n'
+            'var track=document.getElementById("dimmer-track");\n'
+            'var fill=document.getElementById("dimmer-fill");\n'
+            'var pct=document.getElementById("dimmer-pct");\n'
+            'var nameEl=document.getElementById("dimmer-name");\n'
+            'var closeBtn=document.getElementById("dimmer-close-btn");\n'
+            'var iconEl=document.getElementById("dimmer-icon");\n'
+            'var _curEid="",_curBri=0,_lastBri=100;\n'
+            'var _lpTimer=null;\n'
+
+            'function setBri(v){\n'
+            'v=Math.max(0,Math.min(100,Math.round(v)));\n'
+            '_curBri=v;\n'
+            'pct.textContent=v+"%";\n'
+            'fill.style.height=v+"%";\n'
+            'var r=Math.round(221-(221-246)*v/100);\n'
+            'var g=Math.round(221-(221-195)*v/100);\n'
+            'var b=Math.round(221-(221-68)*v/100);\n'
+            'fill.style.background="rgb("+r+","+g+","+b+")";\n'
+            '}\n'
+
+            'function sendBri(){\n'
+            'if(!_curEid)return;\n'
+            'navigator.sendBeacon("' + _url("/action") + '",JSON.stringify({entity_id:_curEid,action:"call-service",service:"light.turn_on",data:{brightness_pct:_curBri}}));\n'
+            '}\n'
+
+            'function showDimmer(eid,ename,ebri,isOn,iconSvg){\n'
+            '_curEid=eid;\n'
+            'nameEl.textContent=ename||"";\n'
+            'var b=isOn?Math.max(0,Math.min(100,Math.round((ebri||0)/255*100))):0;\n'
+            'if(isOn)_lastBri=b||100;\n'
+            'if(iconSvg){iconEl.innerHTML=iconSvg;iconEl.style.display=""}else{iconEl.innerHTML="";iconEl.style.display="none"}\n'
+            'setBri(b);\n'
+            'm.style.display="";\n'
+            '}\n'
+
+            'function hideDimmer(){m.style.display="none";_curEid=""}\n'
+
+            'closeBtn.addEventListener("click",hideDimmer);\n'
+            'm.addEventListener("click",function(e){if(e.target===m)hideDimmer()});\n'
+            '\n'
+            'iconEl.addEventListener("click",function(){\n'
+            'if(!_curEid)return;\n'
+            'var isOn=_curBri>0;\n'
+            'if(isOn){\n'
+            'navigator.sendBeacon("' + _url("/action") + '",JSON.stringify({entity_id:_curEid,action:"call-service",service:"light.turn_off"}));\n'
+            'setBri(0);\n'
+            '}else{\n'
+            'var b=_lastBri||100;\n'
+            'navigator.sendBeacon("' + _url("/action") + '",JSON.stringify({entity_id:_curEid,action:"call-service",service:"light.turn_on",data:{brightness_pct:b}}));\n'
+            'setBri(b);\n'
+            '}\n'
+            '});\n'
+
+            'var _drag=false;\n'
+            'function dragY(y){\n'
+            'var rect=track.getBoundingClientRect();\n'
+            'var v=Math.round((1-(y-rect.top)/rect.height)*100);\n'
+            'setBri(v);\n'
+            '}\n'
+
+            'track.addEventListener("touchstart",function(e){_drag=true;dragY(e.touches[0].clientY)},true);\n'
+            'track.addEventListener("touchmove",function(e){if(_drag){e.preventDefault();dragY(e.touches[0].clientY)}},true);\n'
+            'track.addEventListener("touchend",function(e){if(_drag){_drag=false;sendBri()}},true);\n'
+
+            'document.addEventListener("touchstart",function(e){\n'
+            'var row=e.target.closest(".tile-card[data-light-entity],.entity-row[data-light-entity]");\n'
+            'if(!row)return;\n'
+            'var eid=row.getAttribute("data-light-entity");\n'
+            '_lpTimer=setTimeout(function(){\n'
+            'var ename=(row.querySelector(".tile-name")||row.querySelector(".entity-name")||{}).textContent||"";\n'
+            'var iconEl2=row.querySelector(".tile-icon svg,.entity-icon svg");\n'
+            'var iconSvg=iconEl2?iconEl2.outerHTML:"";\n'
+            'fetch("' + _url("/api/state/") + '"+encodeURIComponent(eid)).then(function(r){return r.json()}).then(function(d){\n'
+            'if(d&&!d.error){\n'
+            'var isOn=d.state==="on";\n'
+            'var ebri=(d.attributes&&d.attributes.brightness)||0;\n'
+            'showDimmer(eid,ename,ebri,isOn,iconSvg);\n'
+            '}else{\n'
+            'showDimmer(eid,ename,0,false,iconSvg);\n'
+            '}\n'
+            '}).catch(function(){showDimmer(eid,ename,0,false,iconSvg)});\n'
+
+            'var blocker=function(ev){ev.preventDefault();ev.stopPropagation();document.removeEventListener("click",blocker,true)};\n'
+            'document.addEventListener("click",blocker,true);\n'
+            '},500);\n'
+            '},true);\n'
+
+            'document.addEventListener("touchmove",function(e){\n'
+            'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
+            '},true);\n'
+
+            'document.addEventListener("touchend",function(e){\n'
+            'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
+            '},true);\n'
+
+            '});\n'
+            '</script>\n'
+        )
+        head_extra += dimmer_js
+
     return (
         '<!DOCTYPE html>\n'
         '<html lang="en">\n'
@@ -230,18 +366,19 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
         '<meta charset="UTF-8">\n'
         '<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">\n'
         '<title>' + title + '</title>\n'
-        '<link rel="stylesheet" href="' + _url("/static/style.css") + '">\n'
-        '<script src="https://unpkg.com/htmx.org@2.0.4"></script>\n'
-        '<script src="https://unpkg.com/htmx-ext-sse@2.2.4/dist/sse.js"></script>\n'
+        + _css_link(dashboard.lightdash.theme)
+        + '<script src="https://unpkg.com/htmx.org@2.0.4"></script>\n'
+        + '<script src="https://unpkg.com/htmx-ext-sse@2.2.4/dist/sse.js"></script>\n'
         + _SW_SCRIPT
         + head_extra +
         '</head>\n'
         '<body>\n'
         '<div class="lv-view" id="view-' + path + '" hx-ext="sse" sse-connect="' + _url("/_sse") + '" style="' + bg + '">\n'
         + cards_html + '\n'
-        '</div>\n'
-        '</body>\n'
-        '</html>'
+        + '</div>\n'
+        + dimmer_html
+        + '</body>\n'
+        + '</html>'
     )
 
 
@@ -288,7 +425,7 @@ def _section_col_count(section: Section) -> int:
     return max(max_col, _DEFAULT_SECTION_COLUMNS)
 
 
-def render_view_index(views: List[View], dashboard_name: str = "") -> str:
+def render_view_index(views: List[View], dashboard: Dashboard, dashboard_name: str = "") -> str:
     links = ""
     for v in views:
         href = _url(f"/d/{html.escape(dashboard_name)}/view/{html.escape(v.path)}") if dashboard_name else _url("/view/" + html.escape(v.path))
@@ -303,7 +440,7 @@ def render_view_index(views: List[View], dashboard_name: str = "") -> str:
         '<meta charset="UTF-8">\n'
         '<meta name="viewport" content="width=device-width,initial-scale=1.0">\n'
         '<title>LightDash</title>\n'
-        '<link rel="stylesheet" href="' + _url("/static/style.css") + '">\n'
+        + _css_link(dashboard.lightdash.theme)
         + _SW_SCRIPT +
         '</head>\n'
         '<body>\n'
@@ -318,7 +455,7 @@ def render_view_index(views: List[View], dashboard_name: str = "") -> str:
     )
 
 
-def render_dashboard_index(dashboards: List[Dict[str, str]]) -> str:
+def render_dashboard_index(dashboards: List[Dict[str, str]], theme: str = "") -> str:
     links = ""
     for d in dashboards:
         name = d.get("url_path", d.get("title", "?"))
@@ -332,7 +469,7 @@ def render_dashboard_index(dashboards: List[Dict[str, str]]) -> str:
         '<meta charset="UTF-8">\n'
         '<meta name="viewport" content="width=device-width,initial-scale=1.0">\n'
         '<title>LightDash</title>\n'
-        '<link rel="stylesheet" href="' + _url("/static/style.css") + '">\n'
+        + _css_link(theme) +
         + _SW_SCRIPT +
         '</head>\n'
         '<body>\n'
@@ -357,7 +494,7 @@ def render_error(message: str) -> str:
         '<meta charset="UTF-8">\n'
         '<meta name="viewport" content="width=device-width,initial-scale=1.0">\n'
         '<title>LightDash - Error</title>\n'
-        '<link rel="stylesheet" href="' + _url("/static/style.css") + '">\n'
+        + _css_link()
         + _SW_SCRIPT +
         '</head>\n'
         '<body>\n'
@@ -396,6 +533,23 @@ def _view_needs_toggle_sync(view: View) -> bool:
             for ent in (c.get("entities") or []):
                 eid = ent if isinstance(ent, str) else (ent.get("entity", "") if isinstance(ent, dict) else "")
                 if _is_binary_domain(eid) and eid.split(".")[0] != "cover":
+                    return True
+    return False
+
+
+def _view_needs_light_dimmer(view: View) -> bool:
+    check_cards = view.cards
+    if view.sections:
+        check_cards = [c for s in view.sections for c in s.cards]
+    for c in check_cards:
+        if c.type == "tile":
+            eid = c.get("entity", "")
+            if eid.split(".")[0] == "light":
+                return True
+        if c.type == "entities":
+            for ent in (c.get("entities") or []):
+                eid = ent if isinstance(ent, str) else (ent.get("entity", "") if isinstance(ent, dict) else "")
+                if eid.split(".")[0] == "light":
                     return True
     return False
 
@@ -745,7 +899,8 @@ def _render_entities(card: Card, indent: int = 2) -> str:
             eicon = ent.get("icon", "")
         else:
             continue
-        icon = _icon_html(_entity_icon(eid, eicon), 18)
+        icon_hidden = eicon == "none"
+        icon = "" if icon_hidden else _icon_html(_entity_icon(eid, eicon), 18)
         state_span = _entity_span(eid, indent=indent + 3)
         type_attr = ent.get("type", "") if isinstance(ent, dict) else ""
         divider = ""
@@ -757,10 +912,12 @@ def _render_entities(card: Card, indent: int = 2) -> str:
             rows += _SP * (indent + 1) + '<div class="entities-section-header">' + section + '</div>\n'
             continue
         row_controls = _render_cover_controls(eid, indent + 2) or _render_entity_toggle(eid, indent + 2)
-        row_attrs: Dict[str, str] = {"class": "entity-row"}
+        row_attrs: Dict[str, str] = {"class": "entity-row" + (" no-icon" if icon_hidden else "")}
         state_color = _icon_color_for_state(eid) if eid else ""
         if state_color:
             row_attrs["style"] = "--state-color: " + state_color
+        if eid and "." in eid and eid.split(".")[0] == "light":
+            row_attrs["data-light-entity"] = eid
         if _is_binary_domain(eid) and eid.split(".")[0] != "cover":
             dom = eid.split(".")[0]
             svc = _domain_toggle_service(dom)
@@ -772,7 +929,7 @@ def _render_entities(card: Card, indent: int = 2) -> str:
             })
         rows += (
             _SP * (indent + 1) + '<div' + _build_attrs(row_attrs) + '>\n'
-            + _SP * (indent + 2) + '<div class="entity-icon">' + icon + '</div>\n'
+            + ('' if icon_hidden else _SP * (indent + 2) + '<div class="entity-icon">' + icon + '</div>\n')
             + _SP * (indent + 2) + '<div class="entity-info">\n'
             + _SP * (indent + 3) + '<div class="entity-name">' + html.escape(ename) + '</div>\n'
             + _SP * (indent + 3) + state_span + '\n'
@@ -874,6 +1031,8 @@ def _render_tile(card: Card, indent: int = 2) -> str:
         state_color = _icon_color_for_state(eid)
         if state_color:
             attrs["style"] = "--tile-color: " + state_color
+    if eid and "." in eid and eid.split(".")[0] == "light":
+        attrs["data-light-entity"] = eid
 
     is_binary = _is_binary_domain(eid)
     is_cover = eid.split(".")[0] == "cover" if "." in eid else False

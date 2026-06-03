@@ -10,6 +10,9 @@ from typing import Any, Set
 logger = logging.getLogger(__name__)
 
 
+MAX_QUEUE = 256
+
+
 class SSEManager:
     def __init__(self):
         self._clients: Set[asyncio.Queue] = set()
@@ -17,7 +20,7 @@ class SSEManager:
         self.connected = False
 
     def subscribe(self) -> asyncio.Queue:
-        q: asyncio.Queue = asyncio.Queue()
+        q: asyncio.Queue = asyncio.Queue(maxsize=MAX_QUEUE)
         self._clients.add(q)
         return q
 

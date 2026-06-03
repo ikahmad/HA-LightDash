@@ -1,5 +1,29 @@
 # Changelog
-Lots of bugfixes, performance improvements and tweaks to reliability, especially around logging config for diagnostics and recovery when connections to the HA event queue crashes.
+Light dimmer modal for light entities, CSS theme support, and dimmer UX refinement.
+
+## v0.10.17 (2026-06-04)
+- **Added:** `icon: none` support on entity items in entities cards — hides the icon, name/state align left naturally (no -offset needed)
+- **Added:** `.entity-row.no-icon` CSS class across all 10 theme files for theme-level styling hooks
+
+## v0.10.16 (2026-06-04)
+- **Added:** Long-press dimmer modal on light entity tiles and entity rows — vertical brightness slider, icon tap toggles on/off, shows entity name and current brightness percent
+- **Added:** CSS theme system — new `lightdash.theme` key in dashboard YAML selects a theme CSS file (default `ha-dark`); themes are drop-in replacements sharing identical class structure
+- **Added:** 9 built-in themes: ha-dark, daylight, glass, hearth, ink, sage, soft, bauhaus, terminal
+- **Changed:** `render_view_index()` signature updated to accept `Dashboard` object for theme-aware rendering
+- **Changed:** Default CSS file is now `ha-dark.css` (was `style.css`)
+- **Changed:** Dimmer modal — on/off button removed, icon click toggles instead (reduces modal height)
+- **Changed:** Dimmer modal — spacing tightened (12px padding, 10px gap), track widened to 88px
+- **Fixed:** `_url()` HTML escaping in dimmer JS — Python string concatenation no longer produces raw `_url(` literal in output
+- **Fixed:** Dimmer JS runs inside `DOMContentLoaded` to avoid null element references from head-early execution
+
+## v0.10.15 (2026-06-03)
+- **Added:** Global exception handlers – `sys.excepthook` and asyncio loop exception handler (log at CRITICAL, catches crashes that would otherwise go silent)
+- **Added:** Signal handlers for SIGTERM/SIGINT/SIGHUP — log signal receipt at WARNING
+- **Changed:** Heartbeat first interval decreased from 300s to 60s for early memory capture
+
+## v0.10.14 (2026-06-03)
+- **Fixed:** OOM crash from unbounded SSE queues — each client queue capped at 256 messages, slow/disconnected clients dropped automatically
+- **Added:** Periodic heartbeat log (every 5 min) with RSS, uptime, and SSE client count to detect memory growth before OOM
 
 ## v0.10.13 (2026-06-03)
 - **Changed:** `RELEASE.md` consolidated — single section per release, no per-commit-version grouping; user-facing only

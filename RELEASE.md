@@ -1,11 +1,20 @@
-# Release Notes for v0.10.13 (2026-06-03)
+# Release Notes for v0.10.17 (2026-06-04)
 
-This release updates LightDash to improve reliability, fix bugs that could cause the addon to restart for no apparent reason, and adds privacy-first logging and diagnostic options to help with troubleshooting.
+This release adds the ability to hide entity icons in entities cards for a cleaner, more compact look.
 
-- **No more mysterious restarts.** We found that a development-mode file watcher was triggering restarts inside the addon — it's been removed, so LightDash will stay running.
-- **Live state updates stay connected.** If the WebSocket to Home Assistant drops, the addon now automatically reconnects and keeps your dashboards in sync.
-- **Faster recovery after network blips.** LightDash will now try to reconnect much more aggressively (up to 20 seconds instead of 2 minutes).
-- **Clear shutdown logs.** You can see in the logs whether the addon shut down gracefully or was killed.
-- **Log timestamps on every line.** Every log message now includes a timestamp, making it much easier to figure out what happened when.
-- **Configurable log level.** A new dropdown in the addon config lets you choose how chatty the logs are — DEBUG, INFO, WARNING, or ERROR. It defaults to WARNING so logs are quiet day-to-day, but you can dial up when troubleshooting.
-- **Optional crash reporting** — off by default. There's a new toggle in the addon config labelled "Send error logs back to developer for diagnostics". If you're asked to share diagnostics while troubleshooting, you can turn it on, reproduce the problem, and the crash details will be sent automatically.
+- **Hide entity icons:** Set `icon: none` on any entity item in an entities card and the icon disappears. The entity name and state naturally shift to the left edge for a compact, text-only row.
+
+# Release Notes for v0.10.15 (2026-06-03)
+
+This release adds better diagnostics for tracking down why the addon occasionally stops with no error logged.
+
+- Added global exception handlers that catch crashes which previously went completely silent — if Python hits an unhandled exception anywhere, it will now be logged at CRITICAL level with full details.
+- Added signal handlers for SIGTERM and SIGINT so the logs will show when the addon receives a shutdown signal from Home Assistant.
+- The heartbeat now fires after 60 seconds (instead of 5 minutes) to capture an early memory and client-count snapshot before the potential death window.
+
+# Release Notes for v0.10.16 (2026-06-04)
+
+This release adds a long-press dimmer modal for light entities and a CSS theme system so you can style your dashboard to match your mood.
+
+- **Light dimmer:** Long-press any light tile or entity row to open a brightness slider. Drag your finger up and down to adjust brightness — the value is sent to Home Assistant when you let go. Tap the light icon to toggle on/off (turning on restores the last brightness).
+- **Dashboard themes:** You can now pick a visual style for each dashboard. Add `theme: name` under the `lightdash:` key in your dashboard YAML, where `name` is one of: `ha-dark` (default), `daylight`, `glass`, `hearth`, `ink`, `sage`, `soft`, `bauhaus`, or `terminal`. Each theme is a complete redesign — colours, fonts, spacing, and control styles all change together.
