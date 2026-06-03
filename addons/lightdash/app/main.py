@@ -26,7 +26,11 @@ from app.parser import parse_dashboard
 from app.renderer import render_error, render_view, render_view_index
 from app.sse_manager import SSEManager, run_ha_websocket_forever
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 logging.getLogger("app.sse_manager").setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 
