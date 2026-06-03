@@ -1,37 +1,53 @@
 # Release Notes
 
-This file contains a user-friendly summary of changes since the last release,
-written for end-users (not developers). Use this to populate release notes.
+User-friendly summary of changes since the last release, written for end-users
+(not developers). Use this to populate release notes.
 
 ## v0.10.12 (2026-06-03)
 
-**Privacy-first error reporting.** You can now choose whether to send error logs to the developer for diagnostics. Head to the LightDash addon configuration page in Home Assistant — there's a new checkbox labelled *"Send error logs back to developer for diagnostics"*. It's off by default. If you're asked to share diagnostics while troubleshooting an issue, you can turn it on and reproduce the problem.
+Privacy and configuration improvements.
+
+- Added a toggle in the addon config labelled "Send error logs back to developer for diagnostics" — off by default. Turn it on if asked to share crash data while troubleshooting.
+- Sentry crash reporting now reads the config before activating, so the toggle is respected immediately on restart.
 
 ---
 
-**You can now control log verbosity.** Head to the LightDash addon configuration page in Home Assistant to choose from DEBUG, INFO, WARNING, or ERROR. Defaults to WARNING — less noise in your addon logs, but you can dial up to INFO or DEBUG when troubleshooting.
+## v0.10.11 (2026-06-03)
 
-**Better log consistency.** All log lines from LightDash now include timestamps, even uvicorn's own startup messages and access logs — no more guessing when something happened.
+Logging improvements.
+
+- Added a log level dropdown to the addon config (DEBUG / INFO / WARNING / ERROR). Defaults to WARNING so logs are quieter day-to-day, but you can dial up to INFO or DEBUG when troubleshooting.
+- All log lines now consistently show timestamps, including uvicorn's own startup messages.
+
+---
+
+## v0.10.10 (2026-06-03)
+
+Internal release infrastructure — no user-facing changes.
 
 ---
 
 ## v0.10.9 (2026-06-03)
 
-**Better log readability.** All log messages now include a timestamp so if you need to share logs for troubleshooting, it's clear when events happened.
+Better log readability.
+
+- All log messages now include a timestamp so it's clear when events happened when sharing logs.
 
 ---
 
 ## v0.10.8 (2026-06-03)
 
-**More stable, better recovery.** This release fixes two reliability issues:
+Reliability improvements and better recovery after network issues.
 
-- **No more mysterious restarts.** The app was using a development-mode file watcher that could trigger a restart for no apparent reason — this has been removed for the addon build, so it'll stay running.
-- **Live updates keep working.** If the WebSocket connection to Home Assistant drops, the addon now automatically reconnects and restarts the event stream. Previously it could silently stop syncing state changes.
-- **Better shutdown logging.** If the addon does stop, there are now clear log entries showing whether it shut down gracefully or was killed.
-- **Faster reconnect.** After a network blip, the app will try to reconnect more aggressively (up to 20s max delay instead of 2 minutes).
+- Fixed mysterious app restarts — removed a development-mode file watcher that could trigger restarts for no apparent reason.
+- Fixed WebSocket connection drops — the addon now automatically reconnects and keeps live state updates flowing, even after network blips.
+- Added clear log messages when the addon shuts down gracefully vs. being killed.
+- Faster reconnection after network issues (up to 20s max delay instead of 2 minutes).
 
 ---
 
 ## v0.10.5 – v0.10.7 (2026-06-03)
 
-**Behind-the-scenes error tracking.** Added Sentry crash reporting so that if something goes wrong, the error details are captured automatically. This helps diagnose issues without needing to reproduce them.
+Behind-the-scenes error tracking.
+
+- Added crash reporting so that if something goes wrong, error details are captured automatically to help diagnose issues.
