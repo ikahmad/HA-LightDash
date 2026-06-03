@@ -1,4 +1,4 @@
-# Release Notes for v0.10.12 (2026-06-03)
+# Release Notes for v0.10.13 (2026-06-03)
 
 This release updates LightDash to improve reliability, fix bugs that could cause the addon to restart for no apparent reason, and adds privacy-first logging and diagnostic options to help with troubleshooting.
 
