@@ -1,6 +1,11 @@
 # Changelog
 Only a few days old, and LightDash has already had a handful of feature requests and 8 pull requests with contributions from other users! Shout-out to `jcmuller` on GitHub, who contributed quality-of-development improvements to make it easier to work with as a developer, a few fixes for layout bugs and column support, and a bugfix for incorrect data parsing with some entity types. Thanks, Juan!
 
+## v0.10.12 (2026-06-03)
+- **Added:** Configurable error diagnostics toggle ("Send error logs back to developer for diagnostics") — addon config checkbox, defaults to off
+- **Changed:** Sentry SDK init moved into `lifespan` so it reads configuration before activating
+- **Added:** Translations entry for `diagnostics` config key
+
 ## v0.10.11 (2026-06-03)
 - **Added:** Configurable log level via addon config dropdown (`log_level` — `DEBUG|INFO|WARNING|ERROR`, default `WARNING`)
 - **Fixed:** Timestamp format now consistently applied to all loggers including uvicorn's own output

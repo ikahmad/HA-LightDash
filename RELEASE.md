@@ -3,7 +3,11 @@
 This file contains a user-friendly summary of changes since the last release,
 written for end-users (not developers). Use this to populate release notes.
 
-## v0.10.11 (2026-06-03)
+## v0.10.12 (2026-06-03)
+
+**Privacy-first error reporting.** You can now choose whether to send error logs to the developer for diagnostics. Head to the LightDash addon configuration page in Home Assistant — there's a new checkbox labelled *"Send error logs back to developer for diagnostics"*. It's off by default. If you're asked to share diagnostics while troubleshooting an issue, you can turn it on and reproduce the problem.
+
+---
 
 **You can now control log verbosity.** Head to the LightDash addon configuration page in Home Assistant to choose from DEBUG, INFO, WARNING, or ERROR. Defaults to WARNING — less noise in your addon logs, but you can dial up to INFO or DEBUG when troubleshooting.
 

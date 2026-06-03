@@ -113,6 +113,19 @@ async def lifespan(app: FastAPI):
     logging.getLogger().setLevel(level)
     logger.info("Log level set to %s", config.log_level)
 
+    if config.diagnostics:
+        sentry_sdk.init(
+            dsn="https://7dd83515f99eff25c8f24ebee7c4c9f5@o4511500507611136.ingest.de.sentry.io/4511500514492496",
+            send_default_pii=True,
+            enable_logs=True,
+            traces_sample_rate=1.0,
+            profile_session_sample_rate=1.0,
+            profile_lifecycle="trace",
+        )
+        logger.info("Error diagnostics enabled — crash reports sent to developer")
+    else:
+        logger.info("Error diagnostics disabled")
+
     ha_client = HAClient(config.ha_url, config.ha_token)
     connected = await ha_client.connect()
 
@@ -174,24 +187,6 @@ async def lifespan(app: FastAPI):
 
     await ha_client.disconnect()
     logger.info("Shutdown complete")
-
-sentry_sdk.init(
-    dsn="https://7dd83515f99eff25c8f24ebee7c4c9f5@o4511500507611136.ingest.de.sentry.io/4511500514492496",
-    # Add data like request headers and IP for users,
-    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
-    send_default_pii=True,
-    # Enable sending logs to Sentry
-    enable_logs=True,
-    # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for tracing.
-    traces_sample_rate=1.0,
-    # Set profile_session_sample_rate to 1.0 to profile 100%
-    # of profile sessions.
-    profile_session_sample_rate=1.0,
-    # Set profile_lifecycle to "trace" to automatically
-    # run the profiler on when there is an active transaction
-    profile_lifecycle="trace",
-)
 
 app = FastAPI(lifespan=lifespan, title="LightDash", version="0.1.0")
 
