@@ -1,6 +1,11 @@
 # Changelog
 Lots of bugfixes, performance improvements and tweaks to reliability, especially around logging config for diagnostics and recovery when connections to the HA event queue crashes.
 
+## v0.10.15 (2026-06-03)
+- **Added:** Global exception handlers – `sys.excepthook` and asyncio loop exception handler (log at CRITICAL, catches crashes that would otherwise go silent)
+- **Added:** Signal handlers for SIGTERM/SIGINT/SIGHUP — log signal receipt at WARNING
+- **Changed:** Heartbeat first interval decreased from 300s to 60s for early memory capture
+
 ## v0.10.14 (2026-06-03)
 - **Fixed:** OOM crash from unbounded SSE queues — each client queue capped at 256 messages, slow/disconnected clients dropped automatically
 - **Added:** Periodic heartbeat log (every 5 min) with RSS, uptime, and SSE client count to detect memory growth before OOM

@@ -1,6 +1,7 @@
-# Release Notes for v0.10.14 (2026-06-03)
+# Release Notes for v0.10.15 (2026-06-03)
 
-This release fixes a memory issue that could cause the addon to crash unexpectedly, and adds better diagnostics to monitor memory usage over time.
+This release adds better diagnostics for tracking down why the addon occasionally stops with no error logged.
 
-- **Fixed a crash caused by memory build-up.** Some SSE (Server-Sent Events) client queues could grow without limit if a client disconnected slowly, eventually running out of memory and causing the container to be killed. Each queue is now capped at 256 messages, and slow clients are cleaned up automatically.
-- **Better diagnostics for memory monitoring.** LightDash now logs a heartbeat every 5 minutes showing memory usage (RSS), uptime, and how many SSE clients are connected. This will help spot memory trends before they become a problem.
+- Added global exception handlers that catch crashes which previously went completely silent — if Python hits an unhandled exception anywhere, it will now be logged at CRITICAL level with full details.
+- Added signal handlers for SIGTERM and SIGINT so the logs will show when the addon receives a shutdown signal from Home Assistant.
+- The heartbeat now fires after 60 seconds (instead of 5 minutes) to capture an early memory and client-count snapshot before the potential death window.

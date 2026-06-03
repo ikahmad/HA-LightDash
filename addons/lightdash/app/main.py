@@ -6,6 +6,7 @@ import json
 import logging
 import sys
 import atexit
+import signal
 import urllib.parse
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -47,6 +48,13 @@ def _log_exit():
         sys.stderr.write("WARNING: LightDash process exiting (atexit, logger unavailable)\n")
         sys.stderr.flush()
 atexit.register(_log_exit)
+
+
+for _sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+    signal.signal(
+        _sig,
+        lambda s, f: logger.warning("Received signal %d (%s)", s, signal.Signals(s).name),
+    )
 
 
 APP_DIR = Path(__file__).parent
@@ -109,8 +117,10 @@ async def _heartbeat(sse: SSEManager) -> None:
     import os, time
 
     start = time.monotonic()
+    first = True
     while True:
-        await asyncio.sleep(300)
+        await asyncio.sleep(60 if first else 300)
+        first = False
         try:
             rss = int(Path(f"/proc/{os.getpid()}/status").read_text().split("VmRSS:")[1].split()[0])
         except Exception:
@@ -126,6 +136,14 @@ async def _heartbeat(sse: SSEManager) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     config = AppConfig.from_env()
+
+    sys.excepthook = lambda t, v, tb: logger.critical(
+        "Unhandled exception", exc_info=(t, v, tb)
+    )
+    loop = asyncio.get_running_loop()
+    loop.set_exception_handler(
+        lambda l, ctx: logger.critical("asyncio exception: %s", ctx)
+    )
 
     level = getattr(logging, config.log_level.upper(), logging.WARNING)
     logging.getLogger().setLevel(level)
