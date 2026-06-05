@@ -1,3 +1,9 @@
+# Release Notes for v0.12.1 (2026-06-06)
+
+This release adds comprehensive documentation for all features including the weather forecast card, long-press modals, and auto-timeout settings.
+
+- **Full README docs:** The README now covers every supported card type including `weather-forecast`, all `lightdash` config options (theme, auto_revert_seconds, auto_close_modal_seconds), and detailed walkthroughs of the long-press dimmer and cover position modals.
+
 # Release Notes for v0.12.0 (2026-06-06)
 
 This release adds a long-press cover control modal and two auto-timeout settings for a more polished interactive experience.

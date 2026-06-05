@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.12.1 (2026-06-06)
+- **Added:** `README.md` documentation for weather-forecast card, cover/light long-press modals, auto-revert and auto-close modal config options, theme support, and architecture notes
+
 ## v0.12.0 (2026-06-06)
 - **Added:** `auto_revert_seconds` lightdash config option — automatically returns to the first dashboard view after a period of inactivity
 - **Added:** `auto_close_modal_seconds` lightdash config option — automatically closes popup modals (dimmer and cover) after a period of inactivity
