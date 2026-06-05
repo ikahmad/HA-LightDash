@@ -49,6 +49,8 @@ class LightdashConfig:
     container_width: str = ""
     container_height: str = ""
     theme: str = "ha-dark"
+    auto_revert_seconds: int = 0
+    auto_close_modal_seconds: int = 0
 
 
 @dataclass

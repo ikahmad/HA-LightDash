@@ -229,11 +229,22 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
              'document.addEventListener("htmx:afterSwap",uclk);\n'
              '</script>\n'
         )
+    modal_html = ""
+    body_script = ""
 
-    dimmer_html = ""
+    if dashboard.lightdash.auto_close_modal_seconds > 0:
+        body_script += '<script>var _acMs=' + str(dashboard.lightdash.auto_close_modal_seconds * 1000) + ';</script>\n'
 
     if _view_needs_light_dimmer(view):
-        dimmer_html = (
+        auto_close_timer = ""
+        auto_close_reset = ""
+        if dashboard.lightdash.auto_close_modal_seconds > 0:
+            auto_close_timer = (
+                "clearTimeout(_acTimer);_acTimer=setTimeout(hideDimmer,_acMs);\n"
+            )
+            auto_close_reset = "if(typeof _acMs!=='undefined'){clearTimeout(_acTimer);_acTimer=setTimeout(hideDimmer,_acMs)}"
+
+        modal_html += (
             '<div id="dimmer-modal" class="dimmer-modal" style="display:none">\n'
             '<div class="dimmer-content">\n'
             '<div class="dimmer-header">\n'
@@ -266,7 +277,7 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'var closeBtn=document.getElementById("dimmer-close-btn");\n'
             'var iconEl=document.getElementById("dimmer-icon");\n'
             'var _curEid="",_curBri=0,_lastBri=100;\n'
-            'var _lpTimer=null;\n'
+            'var _lpTimer=null,_acTimer=null;\n'
 
             'function setBri(v){\n'
             'v=Math.max(0,Math.min(100,Math.round(v)));\n'
@@ -291,13 +302,14 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'if(isOn)_lastBri=b||100;\n'
             'if(iconSvg){iconEl.innerHTML=iconSvg;iconEl.style.display=""}else{iconEl.innerHTML="";iconEl.style.display="none"}\n'
             'setBri(b);\n'
+            + auto_close_timer +
             'm.style.display="";\n'
             '}\n'
 
             'function hideDimmer(){m.style.display="none";_curEid=""}\n'
 
-            'closeBtn.addEventListener("click",hideDimmer);\n'
-            'm.addEventListener("click",function(e){if(e.target===m)hideDimmer()});\n'
+            'closeBtn.addEventListener("click",function(){' + auto_close_reset + 'hideDimmer()});\n'
+            'm.addEventListener("click",function(e){if(e.target===m){' + auto_close_reset + 'hideDimmer()}});\n'
             '\n'
             'iconEl.addEventListener("click",function(){\n'
             'if(!_curEid)return;\n'
@@ -319,9 +331,9 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'setBri(v);\n'
             '}\n'
 
-            'track.addEventListener("touchstart",function(e){_drag=true;dragY(e.touches[0].clientY)},true);\n'
+            'track.addEventListener("touchstart",function(e){_drag=true;dragY(e.touches[0].clientY);' + auto_close_reset + '},true);\n'
             'track.addEventListener("touchmove",function(e){if(_drag){e.preventDefault();dragY(e.touches[0].clientY)}},true);\n'
-            'track.addEventListener("touchend",function(e){if(_drag){_drag=false;sendBri()}},true);\n'
+            'track.addEventListener("touchend",function(e){if(_drag){_drag=false;sendBri();' + auto_close_reset + '}},true);\n'
 
             'document.addEventListener("touchstart",function(e){\n'
             'var row=e.target.closest(".tile-card[data-light-entity],.entity-row[data-light-entity]");\n'
@@ -359,6 +371,153 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
         )
         head_extra += dimmer_js
 
+    if _view_needs_cover_modal(view):
+        auto_close_timer = ""
+        auto_close_reset = ""
+        if dashboard.lightdash.auto_close_modal_seconds > 0:
+            auto_close_timer = (
+                "clearTimeout(_acTimer);_acTimer=setTimeout(hideCover,_acMs);\n"
+            )
+            auto_close_reset = "if(typeof _acMs!=='undefined'){clearTimeout(_acTimer);_acTimer=setTimeout(hideCover,_acMs)}"
+
+        modal_html += (
+            '<div id="cover-modal" class="cover-modal" style="display:none">\n'
+            '<div class="cover-content">\n'
+            '<div class="cover-header">\n'
+            '<span class="cover-name" id="cover-name"></span>\n'
+            '<button class="cover-close" id="cover-close-btn">&#x2715;</button>\n'
+            '</div>\n'
+            '<div class="cover-body">\n'
+            '<div class="cover-slider-wrap">\n'
+            '<div class="cover-track" id="cover-track">\n'
+            '<div class="cover-fill" id="cover-fill"></div>\n'
+            '</div>\n'
+            '</div>\n'
+            '<div class="cover-right">\n'
+            '<button class="cover-btn-up" id="cover-btn-up" aria-label="Open">&#x25B2;</button>\n'
+            '<span class="cover-pos" id="cover-pos">0%</span>\n'
+            '<button class="cover-btn-stop" id="cover-btn-stop" aria-label="Stop">&#x23F9;</button>\n'
+            '<button class="cover-btn-down" id="cover-btn-down" aria-label="Close">&#x25BC;</button>\n'
+            '</div>\n'
+            '</div>\n'
+            '</div>\n'
+            '</div>\n'
+        )
+
+        cover_js = (
+            '<script>\n'
+            'document.addEventListener("DOMContentLoaded",function(){\n'
+            'var m=document.getElementById("cover-modal");\n'
+            'var track=document.getElementById("cover-track");\n'
+            'var fill=document.getElementById("cover-fill");\n'
+            'var posEl=document.getElementById("cover-pos");\n'
+            'var nameEl=document.getElementById("cover-name");\n'
+            'var closeBtn=document.getElementById("cover-close-btn");\n'
+            'var upBtn=document.getElementById("cover-btn-up");\n'
+            'var stopBtn=document.getElementById("cover-btn-stop");\n'
+            'var downBtn=document.getElementById("cover-btn-down");\n'
+            'var _curEid="",_curPos=0;\n'
+            'var _lpTimer=null,_acTimer=null;\n'
+
+            'function setPos(v){\n'
+            'v=Math.max(0,Math.min(100,Math.round(v)));\n'
+            '_curPos=v;\n'
+            'posEl.textContent=v+"%";\n'
+            'fill.style.height=v+"%";\n'
+            'var p=v/100;\n'
+            'var r=Math.round(120+120*p);\n'
+            'var g=Math.round(180+30*p);\n'
+            'var b=Math.round(200-80*p);\n'
+            'fill.style.background="rgb("+r+","+g+","+b+")";\n'
+            '}\n'
+
+            'function sendPos(){\n'
+            'if(!_curEid)return;\n'
+            'navigator.sendBeacon("' + _url("/action") + '",JSON.stringify({entity_id:_curEid,action:"call-service",service:"cover.set_cover_position",data:{position:_curPos}}));\n'
+            '}\n'
+
+            'function doCoverAction(svc){\n'
+            'if(!_curEid)return;\n'
+            'navigator.sendBeacon("' + _url("/action") + '",JSON.stringify({entity_id:_curEid,action:"call-service",service:svc}));\n'
+            '}\n'
+
+            'function showCover(eid,ename,epos){\n'
+            '_curEid=eid;\n'
+            'nameEl.textContent=ename||"";\n'
+            'var p=epos!==null&&epos!==undefined?Math.max(0,Math.min(100,Math.round(epos))):50;\n'
+            'setPos(p);\n'
+            + auto_close_timer +
+            'm.style.display="";\n'
+            '}\n'
+
+            'function hideCover(){m.style.display="none";_curEid=""}\n'
+
+            'closeBtn.addEventListener("click",function(){' + auto_close_reset + 'hideCover()});\n'
+            'm.addEventListener("click",function(e){if(e.target===m){' + auto_close_reset + 'hideCover()}});\n'
+            'upBtn.addEventListener("click",function(){doCoverAction("cover.open_cover");setPos(100)});\n'
+            'stopBtn.addEventListener("click",function(){doCoverAction("cover.stop_cover")});\n'
+            'downBtn.addEventListener("click",function(){doCoverAction("cover.close_cover");setPos(0)});\n'
+
+            'var _drag=false;\n'
+            'function dragY(y){\n'
+            'var rect=track.getBoundingClientRect();\n'
+            'var v=Math.round((1-(y-rect.top)/rect.height)*100);\n'
+            'setPos(v);\n'
+            '}\n'
+
+            'track.addEventListener("touchstart",function(e){_drag=true;dragY(e.touches[0].clientY);' + auto_close_reset + '},true);\n'
+            'track.addEventListener("touchmove",function(e){if(_drag){e.preventDefault();dragY(e.touches[0].clientY)}},true);\n'
+            'track.addEventListener("touchend",function(e){if(_drag){_drag=false;sendPos();' + auto_close_reset + '}},true);\n'
+
+            'document.addEventListener("touchstart",function(e){\n'
+            'var row=e.target.closest(".tile-card[data-cover-entity],.entity-row[data-cover-entity]");\n'
+            'if(!row)return;\n'
+            'var eid=row.getAttribute("data-cover-entity");\n'
+            '_lpTimer=setTimeout(function(){\n'
+            'var ename=(row.querySelector(".tile-name")||row.querySelector(".entity-name")||{}).textContent||"";\n'
+            'fetch("' + _url("/api/state/") + '"+encodeURIComponent(eid)).then(function(r){return r.json()}).then(function(d){\n'
+            'if(d&&!d.error){\n'
+            'var epos=(d.attributes&&d.attributes.current_position);\n'
+            'showCover(eid,ename,epos);\n'
+            '}else{\n'
+            'showCover(eid,ename,50);\n'
+            '}\n'
+            '}).catch(function(){showCover(eid,ename,50)});\n'
+
+            'var blocker=function(ev){ev.preventDefault();ev.stopPropagation();document.removeEventListener("click",blocker,true)};\n'
+            'document.addEventListener("click",blocker,true);\n'
+            '},500);\n'
+            '},true);\n'
+
+            'document.addEventListener("touchmove",function(e){\n'
+            'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
+            '},true);\n'
+
+            'document.addEventListener("touchend",function(e){\n'
+            'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
+            '},true);\n'
+
+            '});\n'
+            '</script>\n'
+        )
+        head_extra += cover_js
+
+    if dashboard.lightdash.auto_revert_seconds > 0:
+        first_view_url = _url("/d/" + html.escape(_dashboard_name) + "/view/" + html.escape(dashboard.views[0].path))
+        ar_secs = dashboard.lightdash.auto_revert_seconds
+        body_script += (
+            '<script>\n'
+            'var _arTimer=null;\n'
+            'var _rvUrl=' + json.dumps(first_view_url) + ';\n'
+            'function resetAr(){if(_arTimer)clearTimeout(_arTimer);_arTimer=setTimeout(function(){window.location.href=_rvUrl},'
+            + str(ar_secs * 1000) + ')}\n'
+            'document.addEventListener("touchstart",resetAr,true);\n'
+            'document.addEventListener("click",resetAr,true);\n'
+            'document.addEventListener("scroll",resetAr,true);\n'
+            'document.addEventListener("DOMContentLoaded",resetAr);\n'
+            '</script>\n'
+        )
+
     return (
         '<!DOCTYPE html>\n'
         '<html lang="en">\n'
@@ -373,10 +532,11 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
         + head_extra +
         '</head>\n'
         '<body>\n'
+        + body_script +
         '<div class="lv-view" id="view-' + path + '" hx-ext="sse" sse-connect="' + _url("/_sse") + '" style="' + bg + '">\n'
         + cards_html + '\n'
         + '</div>\n'
-        + dimmer_html
+        + modal_html
         + '</body>\n'
         + '</html>'
     )
@@ -554,6 +714,23 @@ def _view_needs_light_dimmer(view: View) -> bool:
     return False
 
 
+def _view_needs_cover_modal(view: View) -> bool:
+    check_cards = view.cards
+    if view.sections:
+        check_cards = [c for s in view.sections for c in s.cards]
+    for c in check_cards:
+        if c.type == "tile":
+            eid = c.get("entity", "")
+            if eid.split(".")[0] == "cover":
+                return True
+        if c.type == "entities":
+            for ent in (c.get("entities") or []):
+                eid = ent if isinstance(ent, str) else (ent.get("entity", "") if isinstance(ent, dict) else "")
+                if eid.split(".")[0] == "cover":
+                    return True
+    return False
+
+
 def _view_needs_slider_sync(view: View) -> bool:
     check_cards = view.cards
     if view.sections:
@@ -673,6 +850,9 @@ def _prefetch_icons(view: View) -> None:
         icon = _entity_icon(eid, c.get("icon", ""))
         if icon:
             needed.add(icon.removeprefix("mdi:"))
+        if c.type == "weather-forecast":
+            for cond_icon in _WEATHER_CONDITION_ICONS.values():
+                needed.add(cond_icon)
         if c.type in ("entities", "glance"):
             for ent in (c.get("entities") or []):
                 if isinstance(ent, str):
@@ -916,8 +1096,11 @@ def _render_entities(card: Card, indent: int = 2) -> str:
         state_color = _icon_color_for_state(eid) if eid else ""
         if state_color:
             row_attrs["style"] = "--state-color: " + state_color
-        if eid and "." in eid and eid.split(".")[0] == "light":
-            row_attrs["data-light-entity"] = eid
+        if eid and "." in eid:
+            if eid.split(".")[0] == "light":
+                row_attrs["data-light-entity"] = eid
+            elif eid.split(".")[0] == "cover":
+                row_attrs["data-cover-entity"] = eid
         if _is_binary_domain(eid) and eid.split(".")[0] != "cover":
             dom = eid.split(".")[0]
             svc = _domain_toggle_service(dom)
@@ -1031,8 +1214,11 @@ def _render_tile(card: Card, indent: int = 2) -> str:
         state_color = _icon_color_for_state(eid)
         if state_color:
             attrs["style"] = "--tile-color: " + state_color
-    if eid and "." in eid and eid.split(".")[0] == "light":
-        attrs["data-light-entity"] = eid
+    if eid and "." in eid:
+        if eid.split(".")[0] == "light":
+            attrs["data-light-entity"] = eid
+        elif eid.split(".")[0] == "cover":
+            attrs["data-cover-entity"] = eid
 
     is_binary = _is_binary_domain(eid)
     is_cover = eid.split(".")[0] == "cover" if "." in eid else False
@@ -1448,6 +1634,162 @@ def _render_clock(card: Card, indent: int = 2) -> str:
         + _SP * indent
     )
     return _h("div", attrs, content, indent)
+
+
+_WEATHER_CONDITION_ICONS: Dict[str, str] = {
+    "clear-night": "weather-night",
+    "cloudy": "weather-cloudy",
+    "fog": "weather-fog",
+    "hail": "weather-hail",
+    "lightning": "weather-lightning",
+    "lightning-rainy": "weather-lightning-rainy",
+    "partlycloudy": "weather-partly-cloudy",
+    "pouring": "weather-pouring",
+    "rainy": "weather-rainy",
+    "snowy": "weather-snowy",
+    "snowy-rainy": "weather-snowy-rainy",
+    "sunny": "weather-sunny",
+    "windy": "weather-windy",
+    "windy-variant": "weather-windy-variant",
+    "exceptional": "alert-outline",
+}
+
+
+@register("weather-forecast")
+def _render_weather_forecast(card: Card, indent: int = 2) -> str:
+    eid = card.get("entity", "")
+    if not eid:
+        return _render_placeholder(card, indent)
+
+    forecast_eid = card.get("forecast_entity", "")
+
+    name = card.get("name", "")
+    show_current = card.get("show_current", True)
+    show_forecast = card.get("show_forecast", True)
+    forecast_type = card.get("forecast_type", "daily")
+    secondary_attr = card.get("secondary_info_attribute", "")
+    round_temp = card.get("round_temperature", False)
+    forecast_count = card.get("forecast_count", 0)
+
+    state = _entity_states.get(eid, {})
+    attrs_data = state.get("attributes", {}) if state else {}
+    condition = state.get("state", "") if state else ""
+    temp_unit = attrs_data.get("temperature_unit", "°C")
+
+    if forecast_eid:
+        fc_state = _entity_states.get(forecast_eid, {})
+        fc_attrs = fc_state.get("attributes", {}) if fc_state else {}
+        forecast_list = fc_attrs.get("forecast", [])
+    else:
+        forecast_list = attrs_data.get("forecast", [])
+
+    def _fmt_temp(val, unit=temp_unit, should_round=round_temp):
+        if val is None:
+            return "—"
+        if should_round:
+            val = round(val)
+        return f"{val}{html.escape(unit)}"
+
+    content = ""
+
+    if show_current:
+        temp = attrs_data.get("temperature")
+        humidity = attrs_data.get("humidity")
+        icon_name = _WEATHER_CONDITION_ICONS.get(condition, "weather-cloudy")
+        icon = _icon_html("mdi:" + icon_name, 48)
+
+        sec_text = ""
+        if secondary_attr == "extrema" or not secondary_attr:
+            if forecast_list and forecast_type in ("daily", "twice_daily"):
+                first = forecast_list[0]
+                hi = first.get("temperature")
+                lo = first.get("templow")
+                if hi is not None and lo is not None:
+                    sec_text = f"H: {_fmt_temp(hi)} L: {_fmt_temp(lo)}"
+        if not sec_text and (secondary_attr == "precipitation" or not secondary_attr):
+            if forecast_list:
+                first = forecast_list[0]
+                precip = first.get("precipitation")
+                if precip is not None:
+                    sec_text = f"Precip: {precip}mm"
+        if not sec_text and (secondary_attr == "humidity" or not secondary_attr):
+            if humidity is not None:
+                sec_text = f"Humidity: {humidity}%"
+        if not sec_text and secondary_attr:
+            val = attrs_data.get(secondary_attr)
+            if val is not None:
+                sec_text = f"{secondary_attr.replace('_', ' ').title()}: {val}"
+
+        cond_display = condition.replace("_", " ").title() if condition else "—"
+        temp_display = _fmt_temp(temp)
+
+        content += (
+            '\n'
+            + _SP * (indent + 1) + '<div class="weather-current">\n'
+            + _SP * (indent + 2) + '<div class="weather-icon-large">' + icon + '</div>\n'
+            + _SP * (indent + 2) + '<div class="weather-info">\n'
+            + _SP * (indent + 3) + '<div class="weather-condition">' + html.escape(cond_display) + '</div>\n'
+        )
+        if name:
+            content += _SP * (indent + 3) + '<div class="weather-name">' + html.escape(name) + '</div>\n'
+        content += (
+            _SP * (indent + 2) + '</div>\n'
+            + _SP * (indent + 2) + '<div class="weather-current-right">\n'
+            + _SP * (indent + 3) + '<div class="weather-temp">' + html.escape(temp_display) + '</div>\n'
+        )
+        if sec_text:
+            content += _SP * (indent + 3) + '<div class="weather-secondary">' + html.escape(sec_text) + '</div>\n'
+        content += (
+            _SP * (indent + 2) + '</div>\n'
+            + _SP * (indent + 1) + '</div>\n'
+        )
+
+    if show_forecast:
+        flist = forecast_list
+        logger.info("Weather forecast for %s: %d items in forecast array", eid, len(flist))
+        if forecast_count > 0:
+            flist = flist[:forecast_count]
+        elif forecast_type == "hourly":
+            flist = flist[:12]
+        else:
+            flist = flist[:5]
+
+        if flist:
+            content += _SP * (indent + 1) + '<div class="weather-forecast">\n'
+            for item in flist:
+                fc_cond = item.get("condition", "")
+                fc_icon_name = _WEATHER_CONDITION_ICONS.get(fc_cond, "weather-cloudy")
+                fc_icon = _icon_html("mdi:" + fc_icon_name, 18)
+                fc_temp = item.get("temperature")
+                fc_templow = item.get("templow")
+                dt_str = item.get("datetime", "")
+
+                if forecast_type in ("daily", "twice_daily") and len(dt_str) >= 10:
+                    import datetime as _dt_mod
+                    try:
+                        day = _dt_mod.datetime.strptime(dt_str[:10], "%Y-%m-%d").strftime("%a")
+                    except (ValueError, ImportError):
+                        day = dt_str[:10]
+                elif forecast_type == "hourly" and len(dt_str) >= 16:
+                    day = dt_str[11:16]
+                else:
+                    day = dt_str
+
+                if fc_templow is not None and forecast_type in ("daily", "twice_daily"):
+                    temp_str = f"{_fmt_temp(fc_templow, should_round=True, unit="")}-{_fmt_temp(fc_temp, should_round=True, unit=temp_unit)}"
+                else:
+                    temp_str = _fmt_temp(fc_temp, should_round=True)
+
+                content += (
+                    _SP * (indent + 2) + '<div class="weather-fc-item">\n'
+                    + _SP * (indent + 3) + '<span class="weather-fc-day">' + html.escape(day) + '</span>\n'
+                    + _SP * (indent + 3) + '<span class="weather-fc-icon">' + fc_icon + '</span>\n'
+                    + _SP * (indent + 3) + '<span class="weather-fc-temps">' + html.escape(temp_str) + '</span>\n'
+                    + _SP * (indent + 2) + '</div>\n'
+                )
+            content += _SP * (indent + 1) + '</div>\n'
+
+    return _h("div", {"class": "ha-card weather-card"}, content, indent)
 
 
 # ---- Helpers --------------------------------------------------------------

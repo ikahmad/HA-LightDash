@@ -1,5 +1,24 @@
 # Changelog
-Light dimmer modal for light entities, CSS theme support, and dimmer UX refinement.
+
+## v0.12.0 (2026-06-06)
+- **Added:** `auto_revert_seconds` lightdash config option — automatically returns to the first dashboard view after a period of inactivity
+- **Added:** `auto_close_modal_seconds` lightdash config option — automatically closes popup modals (dimmer and cover) after a period of inactivity
+- **Added:** Long-press cover modal — long-press any cover tile or entity row to open a position slider with open/stop/close buttons alongside
+- **Added:** `data-cover-entity` attribute on cover tile cards and entity rows for long-press targeting
+- **Added:** `_view_needs_cover_modal()` helper for conditional cover modal injection
+- **Added:** Cover modal CSS across all 10 theme files
+- **Changed:** Dimmer modal now also respects `auto_close_modal_seconds` — resets the auto-close timer on slider drag, close button, and backdrop tap
+- **Changed:** Cover inline control buttons (`cover-btn`) class no longer conflicts with modal buttons — test assertion tightened
+
+## v0.11.0 (2026-06-05)
+- **Added:** `weather-forecast` card type — displays current weather conditions (condition icon, temperature, extrema/precipitation/humidity) and forecast list (daily/hourly/twice_daily) from any HA `weather` entity
+- **Added:** `forecast_count` config option — limits how many forecast items appear (default 5 daily / 12 hourly)
+- **Added:** `round_temperature` config option — rounds all displayed temperatures to integers
+- **Added:** `secondary_info_attribute` config option — controls what shows under the current temp (extrema / precipitation / humidity)
+- **Added:** Views containing a weather card auto-refresh every 30 minutes via `<meta http-equiv="refresh">` to pick up updated forecast data
+- **Added:** Weather condition icon mapping (15 HA condition strings → MDI icons) across all 10 theme CSS files
+- **Added:** `_view_needs_weather_refresh()` helper for conditional meta refresh injection
+- **Changed:** Version bump to 0.11.0 (minor feature release)
 
 ## v0.10.17 (2026-06-04)
 - **Added:** `icon: none` support on entity items in entities cards — hides the icon, name/state align left naturally (no -offset needed)

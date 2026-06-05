@@ -338,8 +338,8 @@ def test_entities_cover_controls():
 
     # Cover controls rendered for both cover entities
     assert 'class="cover-controls"' in html
-    # Three buttons per cover × 2 covers = 6
-    assert html.count('class="cover-btn"') == 6
+    # Three buttons per cover × 2 covers = 6 inline control buttons
+    assert html.count('class="cover-btn" aria-label') == 6
 
     # Buttons use correct services
     assert "cover.open_cover" in html
@@ -354,7 +354,6 @@ def test_entities_cover_controls():
     # Non-cover entity (sensor) has no cover controls
     # 2 cover entities = 2 containers; sensor row has none
     assert html.count("cover-controls") == 2
-    assert html.count("cover-btn") == 6
 
 
 def test_tile_numeric_input_feature():
@@ -773,6 +772,142 @@ def test_lightdash_container_width_default():
     html = render_view(view, dashboard)
     assert 'width:' not in html
     assert 'height:' not in html
+
+
+def test_weather_forecast_card():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Weather",
+                "path": "wthr",
+                "cards": [
+                    {
+                        "type": "weather-forecast",
+                        "entity": "weather.openweathermap",
+                        "name": "London",
+                        "forecast_type": "daily",
+                        "forecast_count": 3,
+                        "round_temperature": True,
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    entity_states = {
+        "weather.openweathermap": {
+            "entity_id": "weather.openweathermap",
+            "state": "partlycloudy",
+            "attributes": {
+                "temperature": 18.7,
+                "temperature_unit": "\u00b0C",
+                "humidity": 65,
+                "pressure": 1013,
+                "condition": "partlycloudy",
+                "forecast": [
+                    {"datetime": "2026-06-05T00:00:00", "temperature": 22, "templow": 14, "condition": "sunny", "precipitation": 0.0},
+                    {"datetime": "2026-06-06T00:00:00", "temperature": 19, "templow": 12, "condition": "cloudy", "precipitation": 0.5},
+                    {"datetime": "2026-06-07T00:00:00", "temperature": 16, "templow": 10, "condition": "rainy", "precipitation": 2.0},
+                    {"datetime": "2026-06-08T00:00:00", "temperature": 20, "templow": 13, "condition": "partlycloudy"},
+                ],
+            },
+        }
+    }
+
+    html = render_view(view, dashboard, entity_states=entity_states)
+
+    assert "weather-card" in html
+    assert "weather-current" in html
+    assert "weather-forecast" in html
+    assert "weather-icon-large" in html
+    assert "weather-temp" in html
+    assert "weather-condition" in html
+    assert "Partlycloudy" in html
+    assert "19°C" in html  # 18.7 rounded to 19
+    assert "H: 22°C" in html  # extrema from first forecast day
+    assert "L: 14°C" in html
+
+    assert "weather-fc-item" in html
+    assert html.count("weather-fc-item") == 3  # forecast_count=3 capped
+
+    assert "Fri" in html or "Sat" in html  # day names
+    assert "14-22°C" in html  # high/low from first forecast item (templow/temp)
+    assert "10-16°C" in html  # third forecast item
+
+
+def test_weather_forecast_without_current():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Weather",
+                "path": "wthr",
+                "cards": [
+                    {
+                        "type": "weather-forecast",
+                        "entity": "weather.local",
+                        "show_current": False,
+                        "show_forecast": True,
+                        "forecast_type": "hourly",
+                        "forecast_count": 2,
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    entity_states = {
+        "weather.local": {
+            "entity_id": "weather.local",
+            "state": "rainy",
+            "attributes": {
+                "temperature": 15.0,
+                "temperature_unit": "\u00b0C",
+                "forecast": [
+                    {"datetime": "2026-06-05T14:00:00", "temperature": 15, "condition": "rainy"},
+                    {"datetime": "2026-06-05T15:00:00", "temperature": 16, "condition": "cloudy"},
+                ],
+            },
+        }
+    }
+    html = render_view(view, dashboard, entity_states=entity_states)
+
+    # show_current=false — no current weather section
+    assert "weather-current" not in html
+    # Forecast still rendered
+    assert "weather-forecast" in html
+    assert html.count("weather-fc-item") == 2
+    assert "14:00" in html
+    assert "15:00" in html
+
+
+def test_weather_forecast_no_state():
+    """When entity has no state, render placeholder instead."""
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Weather",
+                "path": "wthr",
+                "cards": [
+                    {"type": "weather-forecast", "entity": ""},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+    assert "placeholder-card" in html
 
 
 def test_tile_cover_controls():

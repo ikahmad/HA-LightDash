@@ -1,3 +1,21 @@
+# Release Notes for v0.12.0 (2026-06-06)
+
+This release adds a long-press cover control modal and two auto-timeout settings for a more polished interactive experience.
+
+- **Cover position modal:** Long-press any cover tile or entity row to open a position slider with dedicated open, stop, and close buttons. Drag the slider to set a precise position, or tap the arrow buttons for full open/close.
+- **Auto-revert to home:** Set `auto_revert_seconds` under the `lightdash:` section to automatically return to the first dashboard view after a period of inactivity — perfect for wall-mounted tablets.
+- **Auto-close modals:** Set `auto_close_modal_seconds` to automatically dismiss popup modals (dimmer, cover) after inactivity, keeping your dashboard clean.
+
+# Release Notes for v0.11.0 (2026-06-05)
+
+This release adds a weather forecast card so you can see current conditions and upcoming weather right on your dashboard.
+
+- **Weather forecast card:** Add `type: weather-forecast` to any dashboard with a weather entity. Shows the current temperature, condition icon, and your choice of secondary info (high/low, precipitation, or humidity) alongside a scrollable forecast list.
+- **Daily, hourly, or twice-daily:** Set `forecast_type` to control the forecast granularity. Daily shows weekday names and high/low ranges; hourly shows times and single temperatures.
+- **Configurable forecast count:** Use `forecast_count` to limit how many forecast items appear — default is 5 for daily/twice-daily and 12 for hourly.
+- **Temperature rounding:** Set `round_temperature: true` to round all displayed temperatures to whole numbers.
+- **Auto-refresh:** Views with a weather card automatically refresh every 30 minutes so the forecast stays current without manual reloads.
+
 # Release Notes for v0.10.17 (2026-06-04)
 
 This release adds the ability to hide entity icons in entities cards for a cleaner, more compact look.
