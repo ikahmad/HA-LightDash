@@ -18,10 +18,10 @@ function icey_textFit() {
 			el.style.fontSize = fontSize + "px";
 			el.style.setProperty("--font_size", fontSize);
 
-			const currentWidth = el.offsetWidth;
-			if (currentWidth > 0) {
-				const ratio = currentWidth / parentWidth;
-				fontSize = fontSize / ratio;
+			for (let iter = 0; iter < 5; iter++) {
+				const cw = el.offsetWidth;
+				if (cw <= parentWidth) break;
+				fontSize = fontSize / (cw / parentWidth);
 				el.style.fontSize = fontSize + "px";
 				el.style.setProperty("--font_size", fontSize);
 			}
