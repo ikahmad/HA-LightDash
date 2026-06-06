@@ -1,0 +1,201 @@
+title: LightDash Showcase
+lightdash:
+  container_width: 960px
+  container_height: 480px
+  theme: ha-dark
+views:
+  - type: sections
+    max_columns: 12
+    title: Showcase
+    badges:
+      - type: entity
+        entity: light.living_room_pendant_light
+        name: Pendant
+      - type: entity
+        entity: light.kitchen
+        name: Kitchen
+      - type: entity
+        entity: sensor.myenergi_my_home_home_consumption_2
+        name: Power
+      - type: shortcut
+        icon: mdi:weather-sunny
+        label: Weather
+        tap_action:
+          action: navigate
+          navigation_path: weather
+      - type: entity-filter
+        entity: cover.kitchen_roof
+        name: Roof open
+        conditions:
+          - entity: cover.kitchen_roof
+            state: open
+    sections:
+      - type: grid
+        cards:
+          - type: clock
+            clock_style: digital
+            clock_size: fit 50%
+            time_zone: Europe/London
+            time_format: '24'
+            show_seconds: false
+            no_background: true
+            lightdash:
+              date_show: true
+              date_format: default
+              date_fontsize: fit 50%
+            grid_options:
+              columns: 12
+              rows: 1
+          - type: tile
+            entity: light.porch
+            show_entity_picture: false
+            hide_state: true
+            vertical: true
+            features_position: bottom
+            color: yellow
+            grid_options:
+              columns: 3
+          - type: tile
+            entity: light.entryway
+            show_entity_picture: false
+            hide_state: true
+            vertical: true
+            features_position: bottom
+            color: orange
+            grid_options:
+              columns: 3
+          - type: tile
+            entity: input_number.home_comfort_temperature
+            name: Comfort
+            show_entity_picture: false
+            vertical: false
+            features:
+              - style: buttons
+                type: numeric-input
+            features_position: inline
+            grid_options:
+              columns: 6
+          - type: entities
+            entities:
+              - entity: light.dining_room
+              - entity: light.kitchen
+              - entity: cover.kitchen_roof
+                name: Roof
+              - entity: light.workshop
+                name: Workshop
+            show_header_toggle: false
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: entities
+            entities:
+              - entity: light.living_room_pendant_light
+                name: Pendant
+              - entity: light.living_room_cabinets
+                name: Cabinets
+                secondary_info: none
+              - entity: light.living_room_floor_lamp
+                name: Floor lamp
+              - entity: light.coffee_bar_light_strip
+                name: Coffee Bar
+                secondary_info: none
+            show_header_toggle: false
+            grid_options:
+              columns: 6
+              rows: auto
+  - type: sections
+    max_columns: 12
+    title: Controls
+    path: controls
+    badges:
+      - type: shortcut
+        icon: mdi:arrow-left-bold
+        label: Back
+        tap_action:
+          action: navigate
+          navigation_path: showcase
+      - type: entity-filter
+        entity: cover.kitchen_roof
+        name: Roof is open
+        conditions:
+          - entity: cover.kitchen_roof
+            state: open
+    sections:
+      - type: grid
+        cards:
+          - type: tile
+            entity: cover.kitchen_roof
+            name: Kitchen Roof
+            lightdash:
+              favourite_values: [25, 50, 75, 100]
+            grid_options:
+              columns: 6
+          - type: tile
+            entity: light.living_room_pendant_light
+            name: Pendant
+            lightdash:
+              favourite_values: [10, 30, 70, 90]
+            features:
+              - type: light-brightness
+            features_position: bottom
+            grid_options:
+              columns: 6
+          - type: weather-forecast
+            entity: weather.london
+            forecast_type: daily
+            forecast_count: 3
+            secondary_info_attribute: extrema
+            round_temperature: true
+            grid_options:
+              columns: 12
+  - type: sections
+    max_columns: 12
+    title: Weather
+    path: weather
+    badges:
+      - type: shortcut
+        icon: mdi:arrow-left-bold
+        label: Back
+        tap_action:
+          action: navigate
+          navigation_path: showcase
+      - type: shortcut
+        icon: mdi:weather-night-partly-cloudy
+        label: HA
+        tap_action:
+          action: url
+          url_path: http://ha.local:8123
+    sections:
+      - type: grid
+        cards:
+          - type: clock
+            clock_style: digital
+            clock_size: fit 40%
+            time_zone: Europe/London
+            time_format: '24'
+            show_seconds: false
+            no_background: true
+            lightdash:
+              date_show: true
+              date_format: iso
+              date_fontsize: fit 40%
+            grid_options:
+              columns: 12
+              rows: 1
+          - type: weather-forecast
+            entity: weather.london
+            forecast_type: daily
+            forecast_count: 4
+            secondary_info_attribute: extrema
+            round_temperature: true
+            grid_options:
+              columns: 6
+          - type: weather-forecast
+            entity: weather.london
+            forecast_entity: sensor.london_forecast_hourly
+            forecast_type: hourly
+            forecast_count: 6
+            secondary_info_attribute: humidity
+            round_temperature: true
+            grid_options:
+              columns: 6
