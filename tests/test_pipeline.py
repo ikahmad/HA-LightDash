@@ -458,6 +458,98 @@ def test_clock_card_renderer():
     assert 'Intl.DateTimeFormat("en-GB"' in html or "Intl.DateTimeFormat" in html
 
 
+def test_clock_fontsize_percent():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "fontsize": "150%"}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert 'style="font-size: 150%"' in html
+
+
+def test_clock_fontsize_fit():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "fontsize": "fit"}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert "icey_text_fit" in html
+    assert "/static/scripts.js" in html
+    assert "icey_textFit()" in html
+
+
+def test_clock_date_default():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "date_show": True}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert "clock-date" in html
+    assert 'data-dfmt="default"' in html
+    assert "toDateString()" in html
+
+
+def test_clock_date_iso():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "date_show": True, "date_format": "iso"}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert 'data-dfmt="iso"' in html
+    assert 'toISOString().split("T")[0]' in html
+
+
+def test_clock_date_locale():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "date_show": True, "date_format": "locale"}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert 'data-dfmt="locale"' in html
+    assert "toLocaleDateString()" in html
+
+
+def test_clock_date_fontsize():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "date_show": True, "date_fontsize": "80%"}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert 'style="font-size: 80%"' in html
+
+
+def test_clock_date_fontsize_fit_triggers_scripts():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "date_show": True, "date_fontsize": "fit"}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert "icey_text_fit" in html
+    assert "/static/scripts.js" in html
+    assert "icey_textFit()" in html
+
+
 def test_entity_toggle_in_entities_card():
     from app.parser import parse_dashboard
     from app.renderer import render_view

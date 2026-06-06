@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.13.0 (2026-06-06)
+- **Added:** `fontsize` clock card option — accepts a percentage string (`"150%"`, `"80%"`) to scale the time text, or `"fit"` to auto-size text to fill the card width
+- **Added:** `date_show` clock card option — shows the current date below the time
+- **Added:** `date_format` clock card option — `default` (toDateString), `iso` (toISOString date-only), or `locale` (toLocaleDateString)
+- **Added:** `date_fontsize` clock card option — same behaviour as `fontsize`, applied to the date line
+- **Added:** Automatic `scripts.js` inclusion and `icey_textFit()` initialisation when any clock card uses `fontsize: fit` or `date_fontsize: fit`
+
 ## v0.12.4 (2026-06-06)
 - **Fixed:** YAML editor inserted tab characters for indentation instead of spaces, causing parsing errors. Editor now uses 4-space indentation with `indentWithTabs: false`, and pasted content has tabs automatically converted to spaces.
 

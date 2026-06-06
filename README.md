@@ -363,6 +363,27 @@ clock_size: large           # small / medium / large
 no_background: true
 ```
 
+#### Font size
+
+Scale the clock text as a percentage of its default size, or set `fit` to
+auto-size text to fill the card width:
+
+```yaml
+type: clock
+fontsize: "150%"            # scale up/down, or "fit" for auto-size
+```
+
+#### Date line
+
+Show the current date below the time:
+
+```yaml
+type: clock
+date_show: true
+date_format: default         # default (toDateString), iso (toISOString), locale (toLocaleDateString)
+date_fontsize: "80%"         # same options as fontsize
+```
+
 ### sensor
 
 ```yaml

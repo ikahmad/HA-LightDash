@@ -218,17 +218,26 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
     if _view_needs_clock(view):
         head_extra += (
             '<script>\n'
-            'function uclk(){document.querySelectorAll(".clock-digital").forEach('
+            'function uclk(){var n=new Date();'
+            'document.querySelectorAll(".clock-digital").forEach('
             'function(e){var o={hour:"2-digit",minute:"2-digit",'
             'timeZone:e.getAttribute("data-tz")||"Europe/London",'
             'hour12:e.getAttribute("data-fmt")!=="24"};'
             'if(e.getAttribute("data-sec"))o.second="2-digit";'
-            'e.textContent=(new Intl.DateTimeFormat("en-GB",o)).format(new Date())})}\n'
+            'e.textContent=(new Intl.DateTimeFormat("en-GB",o)).format(n)});'
+            'document.querySelectorAll(".clock-date").forEach('
+            'function(e){var df=e.getAttribute("data-dfmt")||"default";'
+            'if(df==="iso")e.textContent=n.toISOString().split("T")[0];'
+            'else if(df==="locale")e.textContent=n.toLocaleDateString();'
+            'else e.textContent=n.toDateString()})}\n'
              'setInterval(uclk,30000);\n'
              'document.addEventListener("DOMContentLoaded",uclk);\n'
              'document.addEventListener("htmx:afterSwap",uclk);\n'
              '</script>\n'
         )
+    needs_fit_text = _view_needs_fit_text(view)
+    if needs_fit_text:
+        head_extra += '<script src="' + _url("/static/scripts.js") + '"></script>\n'
     modal_html = ""
     body_script = ""
 
@@ -518,6 +527,10 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             '</script>\n'
         )
 
+    body_tail = ""
+    if needs_fit_text:
+        body_tail = '<script>window.addEventListener("DOMContentLoaded",()=>{icey_textFit()});</script>\n'
+
     return (
         '<!DOCTYPE html>\n'
         '<html lang="en">\n'
@@ -537,6 +550,7 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
         + cards_html + '\n'
         + '</div>\n'
         + modal_html
+        + body_tail
         + '</body>\n'
         + '</html>'
     )
@@ -750,6 +764,17 @@ def _view_needs_clock(view: View) -> bool:
     for c in check_cards:
         if c.type == "clock":
             return True
+    return False
+
+
+def _view_needs_fit_text(view: View) -> bool:
+    check_cards = view.cards
+    if view.sections:
+        check_cards = [c for s in view.sections for c in s.cards]
+    for c in check_cards:
+        if c.type == "clock":
+            if c.get("fontsize", "") == "fit" or c.get("date_fontsize", "") == "fit":
+                return True
     return False
 
 
@@ -1615,6 +1640,10 @@ def _render_clock(card: Card, indent: int = 2) -> str:
     sec = card.get("show_seconds", False)
     size = card.get("clock_size", "medium")
     no_bg = card.get("no_background", False)
+    fontsize = str(card.get("fontsize", "") or "")
+    date_show = card.get("date_show", False)
+    date_format = card.get("date_format", "default")
+    date_fontsize = str(card.get("date_fontsize", "") or "")
 
     size_class = f"clock-size-{size}"
     attrs = {"class": f"ha-card clock-card {size_class}"}
@@ -1623,14 +1652,46 @@ def _render_clock(card: Card, indent: int = 2) -> str:
 
     clock_id = f"c{abs(hash(tz+fmt+str(sec)))%99999999}"
 
-    content = (
-        '\n'
-        + _SP * (indent + 1)
-        + f'<div class="clock-digital" id="{clock_id}"'
+    time_classes = "clock-digital"
+    time_style = ""
+    if fontsize == "fit":
+        time_classes += " icey_text_fit"
+    elif fontsize:
+        time_style = f' style="font-size: {html.escape(fontsize)}"'
+
+    time_html = (
+        f'<div class="{time_classes}" id="{clock_id}"'
         + f' data-tz="{html.escape(tz)}"'
         + f' data-fmt="{html.escape(fmt)}"'
         + (' data-sec="1"' if sec else '')
-        + '>--:--</div>\n'
+        + time_style
+        + '>--:--</div>'
+    )
+
+    date_html = ""
+    if date_show:
+        date_classes = "clock-date"
+        date_style = ""
+        if date_fontsize == "fit":
+            date_classes += " icey_text_fit"
+        elif date_fontsize:
+            date_style = f' style="font-size: {html.escape(date_fontsize)}"'
+
+        date_id = f"d{abs(hash(tz+date_format))%99999999}"
+        date_html = (
+            '\n' + _SP * (indent + 1)
+            + f'<div class="{date_classes}" id="{date_id}"'
+            + f' data-dfmt="{html.escape(date_format)}"'
+            + date_style
+            + '>---</div>'
+        )
+
+    content = (
+        '\n'
+        + _SP * (indent + 1)
+        + time_html
+        + date_html
+        + '\n'
         + _SP * indent
     )
     return _h("div", attrs, content, indent)

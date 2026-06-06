@@ -1,3 +1,13 @@
+# Release Notes for v0.13.0 (2026-06-06)
+
+Clock cards are more flexible with resizable text and an optional date line.
+
+- **Clock font-size control:** Add `fontsize: "150%"` to a clock card to scale the time text up or down, or set `fontsize: fit` to have it automatically fill the card width — the text shrinks or grows to fit without wrapping.
+- **Date line on clock cards:** Set `date_show: true` to show the current date below the time. Choose between `default` (long date), `iso` (YYYY-MM-DD), or `locale` (localised short date). The date has its own `date_fontsize` option, so the time and date can size independently.
+- **Button cards for service calls:** The `button` card works without an `entity` field — perfect for triggering arbitrary HA services with `tap_action`, `target`, and `data`.
+
+---
+
 # Release Notes for v0.12.4 (2026-06-06)
 
 Lots of new features have landed! Here's what's new:
