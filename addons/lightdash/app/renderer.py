@@ -261,6 +261,7 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             '<button class="dimmer-close" id="dimmer-close-btn">&#x2715;</button>\n'
             '</div>\n'
             '<div class="dimmer-body">\n'
+            '<div class="dimmer-left" id="dimmer-left"></div>\n'
             '<div class="dimmer-slider-wrap">\n'
             '<div class="dimmer-track" id="dimmer-track">\n'
             '<div class="dimmer-fill" id="dimmer-fill"></div>\n'
@@ -304,7 +305,7 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'navigator.sendBeacon("' + _url("/action") + '",JSON.stringify({entity_id:_curEid,action:"call-service",service:"light.turn_on",data:{brightness_pct:_curBri}}));\n'
             '}\n'
 
-            'function showDimmer(eid,ename,ebri,isOn,iconSvg){\n'
+            'function showDimmer(eid,ename,ebri,isOn,iconSvg,favVals){\n'
             '_curEid=eid;\n'
             'nameEl.textContent=ename||"";\n'
             'var b=isOn?Math.max(0,Math.min(100,Math.round((ebri||0)/255*100))):0;\n'
@@ -313,6 +314,8 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'setBri(b);\n'
             + auto_close_timer +
             'm.style.display="";\n'
+            'var leftEl=document.getElementById("dimmer-left");\n'
+            'if(leftEl){leftEl.innerHTML="";if(favVals){favVals.split(",").forEach(function(v){var btn=document.createElement("button");btn.textContent=v+"%";btn.className="dimmer-fav-btn";btn.addEventListener("click",function(){setBri(parseInt(v));sendBri();' + auto_close_reset + '});leftEl.appendChild(btn)})})}\n'
             '}\n'
 
             'function hideDimmer(){m.style.display="none";_curEid=""}\n'
@@ -351,6 +354,7 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'var row=e.target.closest(".tile-card[data-light-entity],.entity-row[data-light-entity]");\n'
             'if(!row)return;\n'
             'var eid=row.getAttribute("data-light-entity");\n'
+            'var favVals=row.getAttribute("data-fav-vals")||"";\n'
             '_lpTimer=setTimeout(function(){\n'
             'var ename=(row.querySelector(".tile-name")||row.querySelector(".entity-name")||{}).textContent||"";\n'
             'var iconEl2=row.querySelector(".tile-icon svg,.entity-icon svg");\n'
@@ -359,11 +363,11 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'if(d&&!d.error){\n'
             'var isOn=d.state==="on";\n'
             'var ebri=(d.attributes&&d.attributes.brightness)||0;\n'
-            'showDimmer(eid,ename,ebri,isOn,iconSvg);\n'
+            'showDimmer(eid,ename,ebri,isOn,iconSvg,favVals);\n'
             '}else{\n'
-            'showDimmer(eid,ename,0,false,iconSvg);\n'
+            'showDimmer(eid,ename,0,false,iconSvg,favVals);\n'
             '}\n'
-            '}).catch(function(){showDimmer(eid,ename,0,false,iconSvg)});\n'
+            '}).catch(function(){showDimmer(eid,ename,0,false,iconSvg,favVals)});\n'
 
             'var blocker=function(ev){ev.preventDefault();ev.stopPropagation();document.removeEventListener("click",blocker,true)};\n'
             'document.addEventListener("click",blocker,true);\n'
@@ -382,6 +386,7 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'var row=e.target.closest(".tile-card[data-light-entity],.entity-row[data-light-entity]");\n'
             'if(!row)return;\n'
             'var eid=row.getAttribute("data-light-entity");\n'
+            'var favVals=row.getAttribute("data-fav-vals")||"";\n'
             '_lpTimer=setTimeout(function(){\n'
             'var ename=(row.querySelector(".tile-name")||row.querySelector(".entity-name")||{}).textContent||"";\n'
             'var iconEl2=row.querySelector(".tile-icon svg,.entity-icon svg");\n'
@@ -390,11 +395,11 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'if(d&&!d.error){\n'
             'var isOn=d.state==="on";\n'
             'var ebri=(d.attributes&&d.attributes.brightness)||0;\n'
-            'showDimmer(eid,ename,ebri,isOn,iconSvg);\n'
+            'showDimmer(eid,ename,ebri,isOn,iconSvg,favVals);\n'
             '}else{\n'
-            'showDimmer(eid,ename,0,false,iconSvg);\n'
+            'showDimmer(eid,ename,0,false,iconSvg,favVals);\n'
             '}\n'
-            '}).catch(function(){showDimmer(eid,ename,0,false,iconSvg)});\n'
+            '}).catch(function(){showDimmer(eid,ename,0,false,iconSvg,favVals)});\n'
             '\n'
             'var blocker=function(ev){ev.preventDefault();ev.stopPropagation();document.removeEventListener("click",blocker,true)};\n'
             'document.addEventListener("click",blocker,true);\n'
@@ -431,6 +436,7 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             '<button class="cover-close" id="cover-close-btn">&#x2715;</button>\n'
             '</div>\n'
             '<div class="cover-body">\n'
+            '<div class="cover-left" id="cover-left"></div>\n'
             '<div class="cover-slider-wrap">\n'
             '<div class="cover-track" id="cover-track">\n'
             '<div class="cover-fill" id="cover-fill"></div>\n'
@@ -484,13 +490,15 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'navigator.sendBeacon("' + _url("/action") + '",JSON.stringify({entity_id:_curEid,action:"call-service",service:svc}));\n'
             '}\n'
 
-            'function showCover(eid,ename,epos){\n'
+            'function showCover(eid,ename,epos,favVals){\n'
             '_curEid=eid;\n'
             'nameEl.textContent=ename||"";\n'
             'var p=epos!==null&&epos!==undefined?Math.max(0,Math.min(100,Math.round(epos))):50;\n'
             'setPos(p);\n'
             + auto_close_timer +
             'm.style.display="";\n'
+            'var leftEl=document.getElementById("cover-left");\n'
+            'if(leftEl){leftEl.innerHTML="";if(favVals){favVals.split(",").forEach(function(v){var btn=document.createElement("button");btn.textContent=v+"%";btn.className="cover-fav-btn";btn.addEventListener("click",function(){setPos(parseInt(v));sendPos();' + auto_close_reset + '});leftEl.appendChild(btn)})})}\n'
             '}\n'
 
             'function hideCover(){m.style.display="none";_curEid=""}\n'
@@ -519,16 +527,17 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'var row=e.target.closest(".tile-card[data-cover-entity],.entity-row[data-cover-entity]");\n'
             'if(!row)return;\n'
             'var eid=row.getAttribute("data-cover-entity");\n'
+            'var favVals=row.getAttribute("data-fav-vals")||"";\n'
             '_lpTimer=setTimeout(function(){\n'
             'var ename=(row.querySelector(".tile-name")||row.querySelector(".entity-name")||{}).textContent||"";\n'
             'fetch("' + _url("/api/state/") + '"+encodeURIComponent(eid)).then(function(r){return r.json()}).then(function(d){\n'
             'if(d&&!d.error){\n'
             'var epos=(d.attributes&&d.attributes.current_position);\n'
-            'showCover(eid,ename,epos);\n'
+            'showCover(eid,ename,epos,favVals);\n'
             '}else{\n'
-            'showCover(eid,ename,50);\n'
+            'showCover(eid,ename,50,favVals);\n'
             '}\n'
-            '}).catch(function(){showCover(eid,ename,50)});\n'
+            '}).catch(function(){showCover(eid,ename,50,favVals)});\n'
 
             'var blocker=function(ev){ev.preventDefault();ev.stopPropagation();document.removeEventListener("click",blocker,true)};\n'
             'document.addEventListener("click",blocker,true);\n'
@@ -547,16 +556,17 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'var row=e.target.closest(".tile-card[data-cover-entity],.entity-row[data-cover-entity]");\n'
             'if(!row)return;\n'
             'var eid=row.getAttribute("data-cover-entity");\n'
+            'var favVals=row.getAttribute("data-fav-vals")||"";\n'
             '_lpTimer=setTimeout(function(){\n'
             'var ename=(row.querySelector(".tile-name")||row.querySelector(".entity-name")||{}).textContent||"";\n'
             'fetch("' + _url("/api/state/") + '"+encodeURIComponent(eid)).then(function(r){return r.json()}).then(function(d){\n'
             'if(d&&!d.error){\n'
             'var epos=(d.attributes&&d.attributes.current_position);\n'
-            'showCover(eid,ename,epos);\n'
+            'showCover(eid,ename,epos,favVals);\n'
             '}else{\n'
-            'showCover(eid,ename,50);\n'
+            'showCover(eid,ename,50,favVals);\n'
             '}\n'
-            '}).catch(function(){showCover(eid,ename,50)});\n'
+            '}).catch(function(){showCover(eid,ename,50,favVals)});\n'
             '\n'
             'var blocker=function(ev){ev.preventDefault();ev.stopPropagation();document.removeEventListener("click",blocker,true)};\n'
             'document.addEventListener("click",blocker,true);\n'
@@ -1197,6 +1207,14 @@ def _render_entities(card: Card, indent: int = 2) -> str:
                 row_attrs["data-light-entity"] = eid
             elif eid.split(".")[0] == "cover":
                 row_attrs["data-cover-entity"] = eid
+        if isinstance(ent, dict):
+            ld = ent.get("lightdash", {}) or {}
+            if isinstance(ld, dict):
+                fav_vals = ld.get("favourite_values", []) or []
+                if isinstance(fav_vals, list):
+                    valid = [str(int(v)) for v in fav_vals[:4] if isinstance(v, (int, float)) and 0 <= v <= 100]
+                    if valid:
+                        row_attrs["data-fav-vals"] = ",".join(valid)
         if _is_binary_domain(eid) and eid.split(".")[0] != "cover":
             dom = eid.split(".")[0]
             svc = _domain_toggle_service(dom)
@@ -1315,6 +1333,13 @@ def _render_tile(card: Card, indent: int = 2) -> str:
             attrs["data-light-entity"] = eid
         elif eid.split(".")[0] == "cover":
             attrs["data-cover-entity"] = eid
+    ld = card.get("lightdash", {}) or {}
+    if isinstance(ld, dict):
+        fav_vals = ld.get("favourite_values", []) or []
+        if isinstance(fav_vals, list):
+            valid = [str(int(v)) for v in fav_vals[:4] if isinstance(v, (int, float)) and 0 <= v <= 100]
+            if valid:
+                attrs["data-fav-vals"] = ",".join(valid)
 
     is_binary = _is_binary_domain(eid)
     is_cover = eid.split(".")[0] == "cover" if "." in eid else False

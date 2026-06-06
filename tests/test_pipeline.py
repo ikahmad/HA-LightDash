@@ -1080,3 +1080,260 @@ def test_tile_cover_controls():
     toggle_actions = html.count('hx-post="/action"')
     # Light tile has 1 action (toggle on body), cover has 3 actions (open/stop/close)
     assert toggle_actions >= 3
+
+
+def test_tile_favourite_values_light():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Lights",
+                "path": "lights",
+                "cards": [
+                    {
+                        "type": "tile",
+                        "entity": "light.test",
+                        "name": "Test Light",
+                        "lightdash": {
+                            "favourite_values": [25, 50, 75, 100],
+                        },
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="25,50,75,100"' in html
+    assert 'data-light-entity="light.test"' in html
+
+
+def test_tile_favourite_values_cover():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Covers",
+                "path": "covers",
+                "cards": [
+                    {
+                        "type": "tile",
+                        "entity": "cover.garage",
+                        "name": "Garage",
+                        "lightdash": {
+                            "favourite_values": [0, 50, 100],
+                        },
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="0,50,100"' in html
+    assert 'data-cover-entity="cover.garage"' in html
+
+
+def test_entities_favourite_values_light():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Entities",
+                "path": "ents",
+                "cards": [
+                    {
+                        "type": "entities",
+                        "entities": [
+                            {
+                                "entity": "light.kitchen",
+                                "lightdash": {"favourite_values": [1, 10, 50, 99]},
+                            },
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="1,10,50,99"' in html
+    assert 'data-light-entity="light.kitchen"' in html
+
+
+def test_entities_favourite_values_cover():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Entities",
+                "path": "ents",
+                "cards": [
+                    {
+                        "type": "entities",
+                        "entities": [
+                            {
+                                "entity": "cover.garage",
+                                "lightdash": {"favourite_values": [0, 100]},
+                            },
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="0,100"' in html
+    assert 'data-cover-entity="cover.garage"' in html
+
+
+def test_favourite_values_truncation():
+    """Only first 4 values should be emitted."""
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Lights",
+                "path": "lights",
+                "cards": [
+                    {
+                        "type": "tile",
+                        "entity": "light.test",
+                        "lightdash": {"favourite_values": [10, 20, 30, 40, 50]},
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="10,20,30,40"' in html
+    assert 'data-fav-vals="10,20,30,40,50"' not in html
+
+
+def test_favourite_values_bounds_filtering():
+    """Values outside 0-100 should be filtered out."""
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Lights",
+                "path": "lights",
+                "cards": [
+                    {
+                        "type": "tile",
+                        "entity": "light.test",
+                        "lightdash": {"favourite_values": [-1, 0, 50, 100, 101]},
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="0,50,100"' in html
+
+
+def test_favourite_values_non_numeric_filtered():
+    """Non-numeric values (strings) should be filtered out."""
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Lights",
+                "path": "lights",
+                "cards": [
+                    {
+                        "type": "tile",
+                        "entity": "light.test",
+                        "lightdash": {"favourite_values": ["foo", 50, None, 75]},
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="50,75"' in html
+
+
+def test_favourite_values_empty_list_no_attribute():
+    """Empty favourite_values list should not emit data-fav-vals."""
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Lights",
+                "path": "lights",
+                "cards": [
+                    {
+                        "type": "tile",
+                        "entity": "light.test",
+                        "lightdash": {"favourite_values": []},
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="' not in html
+
+
+def test_favourite_values_no_lightdash_key():
+    """Missing lightdash key should not emit data-fav-vals."""
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Lights",
+                "path": "lights",
+                "cards": [
+                    {
+                        "type": "tile",
+                        "entity": "light.test",
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="' not in html

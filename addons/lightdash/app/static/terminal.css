@@ -393,6 +393,9 @@ html, body {
   width: 34px; height: 5px; border-radius: 3px; background: var(--dimmer-grip, rgba(0,0,0,0.28));
 }
 .dimmer-thumb { position: absolute; left: 50%; transform: translateX(-50%); width: 34px; height: 5px; border-radius: 3px; background: var(--dimmer-grip, rgba(0,0,0,0.28)); }
+.dimmer-left, .cover-left { display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; flex-shrink: 0; width: 48px; }
+.dimmer-fav-btn, .cover-fav-btn { width: 40px; height: 40px; border: none; border-radius: 50%; background: #2a2a2a; color: #ccc; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; padding: 0; }
+.dimmer-fav-btn:active, .cover-fav-btn:active { background: #3a3a3a; }
 .dimmer-right { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 14px; width: 72px; flex-shrink: 0; padding-bottom: 6px; }
 .dimmer-icon { cursor: pointer; display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: var(--radius-sm); }
 .dimmer-icon:active { filter: brightness(0.9); }
