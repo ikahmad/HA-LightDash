@@ -13,13 +13,13 @@ function icey_textFit() {
 			if (el.innerText.length === 0) return;
 
 			const parentWidth = el.parentElement.offsetWidth;
-			
-			let fontSize = parentWidth / el.innerText.length;
+			let fontSize = parentWidth;
 			el.style.fontSize = fontSize + "px";
 			el.style.setProperty("--font_size", fontSize);
 
-			for (let iter = 0; iter < 5; iter++) {
+			for (let iter = 0; iter < 10; iter++) {
 				const cw = el.offsetWidth;
+				if (cw <= 0) break;
 				if (cw <= parentWidth) break;
 				fontSize = fontSize / (cw / parentWidth);
 				el.style.fontSize = fontSize + "px";

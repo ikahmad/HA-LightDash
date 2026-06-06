@@ -35,7 +35,7 @@ views:
             no_background: true
             type: clock
             lightdash:
-              date_show: true
+              date_show: false
               date_format: iso
               date_fontsize: fit
             grid_options:
