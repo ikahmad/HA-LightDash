@@ -51,7 +51,7 @@ html, body {
   text-decoration: none;
   font-size: 1.1rem;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
 }
 .view-index a:hover {
@@ -81,7 +81,7 @@ html, body {
 /* ----- Heading Card ----- */
 .heading-card {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   padding: 4px 0;
 }
@@ -131,7 +131,7 @@ html, body {
 }
 .entity-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   min-height: 40px;
 }
@@ -139,7 +139,7 @@ html, body {
   width: 40px;
   height: 40px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
@@ -209,7 +209,7 @@ html, body {
   gap: 4px;
   flex-shrink: 0;
   margin-left: auto;
-  align-items: flex-start;
+  align-items: center;
 }
 .cover-btn {
   width: 32px;
@@ -221,7 +221,7 @@ html, body {
   cursor: pointer;
   font-size: 0.8rem;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   -webkit-tap-highlight-color: transparent;
   padding: 0;
@@ -233,7 +233,7 @@ html, body {
 
 .entity-toggle {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   margin-left: auto;
   flex-shrink: 0;
 }
@@ -256,7 +256,7 @@ html, body {
 .glance-item {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 4px;
   padding: 10px 6px;
   border-radius: 8px;
@@ -293,7 +293,7 @@ html, body {
   width: 100%;
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   gap: 8px;
   padding: 14px 16px;
@@ -319,7 +319,7 @@ html, body {
 .toggle-switch {
   position: relative;
   display: inline-flex;
-  align-items: flex-start;
+  align-items: center;
   cursor: pointer;
 }
 .toggle-input {
@@ -363,7 +363,7 @@ html, body {
 }
 .tile-content {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 14px;
   padding: 14px;
   cursor: pointer;
@@ -373,19 +373,19 @@ html, body {
 }
 .tile-content.vertical {
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   text-align: center;
 }
 .tile-content.vertical .tile-info {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
 }
 .tile-icon {
   width: 34px;
   height: 34px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   flex-shrink: 0;
   background: color-mix(in srgb, var(--tile-color) 20%, #1e1e1e);
@@ -417,7 +417,7 @@ html, body {
 .tile-info-inline {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
 }
 .tile-info-inline .feature-row {
@@ -475,7 +475,7 @@ html, body {
 
 .numeric-input {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   flex: 1;
   justify-content: flex-end;
@@ -490,7 +490,7 @@ html, body {
   cursor: pointer;
   font-size: 1.1rem;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   -webkit-tap-highlight-color: transparent;
   padding: 0;
@@ -506,7 +506,7 @@ html, body {
 }
 .light-content {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   padding: 14px;
 }
@@ -514,7 +514,7 @@ html, body {
   width: 40px;
   height: 40px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
@@ -556,7 +556,7 @@ html, body {
 }
 .sensor-content {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
 }
 .sensor-icon svg {
@@ -615,7 +615,7 @@ html, body {
 /* ----- Clock Card ----- */
 .clock-card {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
 }
 .clock-card.clock-no-bg {
@@ -683,7 +683,7 @@ html, body {
 /* ----- Placeholder Card ----- */
 .placeholder-card {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   min-height: 80px;
   font-size: 4rem;
@@ -773,7 +773,7 @@ html, body {
 /* ----- Dimmer Modal ----- */
 .dimmer-modal {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   position: fixed;
   inset: 0;
@@ -793,7 +793,7 @@ html, body {
 }
 .dimmer-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
 }
 .dimmer-name {
@@ -818,7 +818,7 @@ html, body {
   font-size: 2.8rem;
   cursor: pointer;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
@@ -830,20 +830,20 @@ html, body {
 }
 .dimmer-body {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   gap: 28px;
   padding: 4px 0;
 }
 .dimmer-slider-wrap {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
 }
 .dimmer-right {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   width: 64px;
   flex-shrink: 0;
@@ -885,7 +885,7 @@ html, body {
 /* ----- Cover Modal (long-press cover control) ----- */
 .cover-modal {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   position: fixed;
   inset: 0;
@@ -908,7 +908,7 @@ html, body {
 }
 .cover-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
@@ -934,7 +934,7 @@ html, body {
   line-height: 1;
   cursor: pointer;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   -webkit-tap-highlight-color: transparent;
   padding: 0;
@@ -949,7 +949,7 @@ html, body {
 }
 .cover-slider-wrap {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
 }
 .cover-track {

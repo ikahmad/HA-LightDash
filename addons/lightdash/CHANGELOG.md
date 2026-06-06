@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.12.2 (2026-06-06)
+- **Fixed:** Broad `align-items: flex-start` replacement in v0.12.0 accidentally changed all CSS flex containers from `center` to `flex-start` — entities, tiles, glance, button, heading, dimmer, and clock cards all had their content top-aligned instead of centered. Reverted all to `center` except the intended `.weather-current` rule.
+
 ## v0.12.1 (2026-06-06)
 - **Added:** `README.md` documentation for weather-forecast card, cover/light long-press modals, auto-revert and auto-close modal config options, theme support, and architecture notes
 

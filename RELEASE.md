@@ -1,3 +1,9 @@
+# Release Notes for v0.12.2 (2026-06-06)
+
+This release fixes a layout regression where all card content was top-aligned instead of centered.
+
+- **Fixed card alignment:** An overly broad CSS change in v0.12.0 accidentally switched every `align-items: center` rule to `flex-start`, causing entity rows, tiles, glance items, buttons, headings, toggles, dimmer modals, and clock cards to all shift their content to the top. Everything is back to centered now. The only rule that correctly stays at `flex-start` is `.weather-current` (the condition text needs top-alignment with the icon).
+
 # Release Notes for v0.12.1 (2026-06-06)
 
 This release adds comprehensive documentation for all features including the weather forecast card, long-press modals, and auto-timeout settings.
