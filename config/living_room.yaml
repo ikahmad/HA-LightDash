@@ -28,12 +28,16 @@ views:
             vertical: true
             features_position: bottom
           - clock_style: digital
-            clock_size: large
+            clock_size: fit
             time_zone: Europe/London
             time_format: '24'
             show_seconds: false
             no_background: true
             type: clock
+            lightdash:
+              date_show: true
+              date_format: iso
+              date_fontsize: fit
             grid_options:
               columns: 6
               rows: 1

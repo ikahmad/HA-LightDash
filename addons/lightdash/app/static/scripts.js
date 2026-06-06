@@ -15,12 +15,14 @@ function icey_textFit() {
 			const parentWidth = el.parentElement.offsetWidth;
 			
 			let fontSize = parentWidth / el.innerText.length;
+			el.style.fontSize = fontSize + "px";
 			el.style.setProperty("--font_size", fontSize);
 
 			const currentWidth = el.offsetWidth;
 			if (currentWidth > 0) {
 				const ratio = currentWidth / parentWidth;
 				fontSize = fontSize / ratio;
+				el.style.fontSize = fontSize + "px";
 				el.style.setProperty("--font_size", fontSize);
 			}
 		});
