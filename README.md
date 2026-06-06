@@ -11,7 +11,7 @@ LightDash is designed to handle copy-and-pasted YAML from existing dashboards wi
 
 **Caveat 2:** Yep, I used OpenCode to build a lot of this. I'm a 25+ year software architect and developer, but this started as a one-day project. I'm pretty happy it's not filled with slop - I've reviewed it and it's passable - but I make no warranties about code quality this early in its life.
 
-![LightDash](example-images/example-lightdash.png)
+![LightDash](https://github.com/richkershaw/HA-LightDash/raw/main/example-images/example-lightdash.png)
 
 Installation
 ------------
@@ -177,7 +177,7 @@ lightdash:
                                    #   (0=disabled)
 ```
 
-![Themes](example-images/readme-themes.png)
+![Themes](https://github.com/richkershaw/HA-LightDash/raw/main/example-images/readme-themes.png)
 
 ### View fields
 
@@ -408,7 +408,7 @@ lightdash:
   date_fontsize: "80%"         # same options as clock_size (%, fit, fit 75%)
 ```
 
-![Clock](example-images/example-clock.png)
+![Clock](https://github.com/richkershaw/HA-LightDash/raw/main/example-images/example-clock.png)
 
 ### sensor
 
@@ -522,7 +522,7 @@ Current conditions show the condition icon, condition name, temperature, and
 secondary info. Forecast items are laid out horizontally (fill width for ≤5
 items, scroll for more).
 
-![Weather](example-images/example-weather.png)
+![Weather](https://github.com/richkershaw/HA-LightDash/raw/main/example-images/example-weather.png)
 
 ### placeholder
 
@@ -541,7 +541,7 @@ A vertical brightness slider with tap-to-toggle on the light icon. Drag up/down
 to set brightness — value is sent on release. Tap the icon to toggle on/off
 (turning on restores the last brightness).
 
-![Dimmer modal](example-images/example-modal.png)
+![Dimmer modal](https://github.com/richkershaw/HA-LightDash/raw/main/example-images/example-modal.png)
 
 ### Cover Position
 
@@ -570,7 +570,7 @@ first 4 are used.
 The buttons appear vertically on the left side of the modal, distributed
 evenly top-to-bottom (highest to lowest):
 
-![Favourite values](example-images/example-popup-favourites.png)
+![Favourite values](https://github.com/richkershaw/HA-LightDash/raw/main/example-images/example-popup-favourites.png)
 
 Tap a favourite button to set the brightness or position immediately.
 The slider updates to match.
@@ -629,7 +629,7 @@ Badges
 
 Badges are compact pills that sit above the cards in a view. They show entity state at a glance, navigate between views, or conditionally appear based on entity state.
 
-![Badges](example-images/example-badges.png)
+![Badges](https://github.com/richkershaw/HA-LightDash/raw/main/example-images/example-badges.png)
 
 Three badge types are supported — `entity`, `shortcut`, and `entity-filter`. See the [addon README](addons/lightdash/README.md#badges) for YAML examples.
 
