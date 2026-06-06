@@ -58,7 +58,7 @@ _DEFAULT_THEME = "ha-dark"
 def _css_link(theme: str = "") -> str:
     if not theme:
         theme = _DEFAULT_THEME
-    return '<link rel="stylesheet" href="' + _url(f"/static/{theme}.css") + '">\n'
+    return '<link rel="stylesheet" href="' + _url("/static/style.css") + '">\n<link rel="stylesheet" href="' + _url(f"/static/{theme}.css") + '">\n'
 
 _entity_icons: Dict[str, str] = {}
 _entity_states: Dict[str, Any] = {}
@@ -622,6 +622,7 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
         '<body>\n'
         + body_script +
         '<div class="lv-view" id="view-' + path + '" hx-ext="sse" sse-connect="' + _url("/_sse") + '" style="' + bg + '">\n'
+        + _render_badges(view)
         + cards_html + '\n'
         + '</div>\n'
         + modal_html
@@ -857,6 +858,101 @@ def _view_needs_fit_text(view: View) -> bool:
                 if dfs == "fit" or dfs.startswith("fit "):
                     return True
     return False
+
+
+# ---- Badge Renderers -----------------------------------------------------
+
+
+def _render_badges(view: View) -> str:
+    if not view.badges:
+        return ""
+    items = ""
+    for i, badge in enumerate(view.badges):
+        btype = badge.get("type", "entity")
+        if btype == "entity":
+            items += _render_entity_badge(badge)
+        elif btype == "shortcut":
+            items += _render_shortcut_badge(badge)
+        elif btype == "entity-filter":
+            items += _render_entity_filter_badge(badge, i, view.path)
+    if not items:
+        return ""
+    return '<div class="badges-bar">\n' + items + '</div>\n'
+
+
+def _render_entity_badge(badge: dict) -> str:
+    eid = badge.get("entity", "")
+    if not eid:
+        return ""
+    icon = _icon_html(_entity_icon(eid, badge.get("icon", "")), 16)
+    name = html.escape(badge.get("name", _friendly_name(eid)))
+    state_span = _entity_span(eid)
+    attrs: Dict[str, str] = {"class": "badge entity-badge"}
+    if _is_binary_domain(eid):
+        dom = eid.split(".")[0]
+        svc = _domain_toggle_service(dom)
+        attrs["hx-post"] = _url("/action")
+        attrs["hx-trigger"] = "click"
+        attrs["hx-vals"] = _js_obj(entity_id=eid, action="toggle", service=svc)
+        attrs["hx-swap"] = "none"
+    content = '<span class="badge-icon">' + icon + '</span><span class="badge-name">' + name + '</span>' + state_span
+    return _h("div", attrs, content, 2)
+
+
+def _render_shortcut_badge(badge: dict) -> str:
+    icon = _icon_html(badge.get("icon", ""), 16)
+    label = html.escape(badge.get("label", ""))
+    attrs: Dict[str, str] = {"class": "badge shortcut-badge"}
+    ta = badge.get("tap_action", {})
+    if isinstance(ta, dict):
+        a = Action(**{k: v for k, v in ta.items() if k in Action.__dataclass_fields__})
+        if a.action == "navigate":
+            path = _url("/d/" + html.escape(_dashboard_name) + "/view/" + html.escape(a.navigation_path))
+            attrs["hx-get"] = path
+            attrs["hx-target"] = "body"
+            attrs["hx-push-url"] = "true"
+            attrs["hx-trigger"] = "click"
+        elif a.action == "url":
+            attrs["onclick"] = "window.open('" + html.escape(a.url_path) + "','_blank')"
+    content = '<span class="badge-icon">' + icon + '</span><span class="badge-name">' + label + '</span>'
+    return _h("div", attrs, content, 2)
+
+
+def _render_entity_filter_badge(badge: dict, idx: int, view_path: str) -> str:
+    eid = badge.get("entity", "")
+    conditions = badge.get("conditions", [])
+    if not _filter_entity_matches(eid, conditions):
+        return ""
+    icon = _icon_html(_entity_icon(eid, badge.get("icon", "")), 16)
+    name = html.escape(badge.get("name", _friendly_name(eid)))
+    safe_dash = html.escape(_dashboard_name)
+    safe_path = html.escape(view_path)
+    attrs: Dict[str, str] = {
+        "class": "badge entity-filter-badge",
+        "id": f"badge-{idx}",
+        "hx-get": _url(f"/api/view/{safe_dash}/{safe_path}/badge/{idx}"),
+        "hx-trigger": f"sse:entity_{eid.replace('.', '_')}",
+        "hx-swap": "outerHTML",
+    }
+    content = '<span class="badge-icon">' + icon + '</span><span class="badge-name">' + name + '</span>'
+    return _h("div", attrs, content, 2)
+
+
+def _filter_entity_matches(entity_id: str, conditions: list) -> bool:
+    if not conditions:
+        return True
+    for cond in conditions:
+        if not isinstance(cond, dict):
+            continue
+        cond_entity = cond.get("entity", "")
+        cond_state = cond.get("state", "")
+        if not cond_entity:
+            continue
+        state = _entity_states.get(cond_entity, {})
+        actual = state.get("state", "")
+        if actual.lower() != cond_state.lower():
+            return False
+    return True
 
 
 def _render_card(card: Card, indent: int = 2) -> str:

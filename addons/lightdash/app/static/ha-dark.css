@@ -1170,3 +1170,15 @@ html, body {
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+
+/* ----- Badges Bar ----- */
+.badge {
+  background: var(--control-bg);
+  color: var(--control-text);
+}
+.badge:active {
+  filter: brightness(0.9);
+}
+.entity-badge .entity-state {
+  color: var(--text-faint);
+}

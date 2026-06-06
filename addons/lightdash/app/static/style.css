@@ -692,6 +692,47 @@ html, body {
   background: #1a1a1a;
 }
 
+/* ----- Badges Bar ----- */
+.badges-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  background: #2a2a2a;
+  color: #ccc;
+  font-size: 0.8rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.badge:active {
+  filter: brightness(0.85);
+}
+.badge-icon svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+  display: block;
+}
+.badge-name {
+  white-space: nowrap;
+}
+.entity-badge .entity-state {
+  font-size: 0.75rem;
+  color: #888;
+  margin-left: 2px;
+}
+.entity-filter-badge.hidden {
+  display: none;
+}
+
 /* ----- SSE / HTMX helpers ----- */
 [sse-swap] {
   display: inline;

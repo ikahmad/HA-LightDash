@@ -628,3 +628,15 @@ body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-in
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+
+/* ----- Badges Bar ----- */
+.badge {
+  background: var(--control-bg);
+  color: var(--control-text);
+}
+.badge:active {
+  filter: brightness(0.9);
+}
+.entity-badge .entity-state {
+  color: var(--text-faint);
+}

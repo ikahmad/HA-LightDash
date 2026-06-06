@@ -1313,6 +1313,312 @@ def test_favourite_values_empty_list_no_attribute():
     assert 'data-fav-vals="' not in html
 
 
+def test_badge_entity_renders():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [
+                    {"type": "entity", "entity": "sensor.temp", "name": "Temp"},
+                ],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'class="badges-bar"' in html
+    assert 'class="badge entity-badge"' in html
+    assert 'class="badge-name"' in html
+    assert "Temp" in html
+    assert 'data-entity="sensor.temp"' in html
+
+
+def test_badge_entity_binary_toggle():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [
+                    {"type": "entity", "entity": "light.kitchen", "name": "Kitchen"},
+                ],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'class="badge entity-badge"' in html
+    assert 'hx-post="/action"' in html
+    assert "light.toggle" in html
+
+
+def test_badge_shortcut_navigate():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [
+                    {
+                        "type": "shortcut",
+                        "icon": "mdi:home",
+                        "label": "Home",
+                        "tap_action": {"action": "navigate", "navigation_path": "home"},
+                    },
+                ],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard, dashboard_name="test_dash")
+
+    assert 'class="badge shortcut-badge"' in html
+    assert "badge-name" in html
+    assert "Home" in html
+    assert 'hx-get="/d/test_dash/view/home"' in html
+    assert 'hx-target="body"' in html
+
+
+def test_badge_shortcut_url():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [
+                    {
+                        "type": "shortcut",
+                        "label": "HA",
+                        "tap_action": {"action": "url", "url_path": "http://ha.local:8123"},
+                    },
+                ],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'class="badge shortcut-badge"' in html
+    assert "window.open" in html
+    assert "http://ha.local:8123" in html
+
+
+def test_badge_entity_filter_matches():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [
+                    {
+                        "type": "entity-filter",
+                        "entity": "light.kitchen",
+                        "name": "Kitchen On",
+                        "conditions": [{"entity": "light.kitchen", "state": "on"}],
+                    },
+                ],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    entity_states = {"light.kitchen": {"entity_id": "light.kitchen", "state": "on"}}
+    html = render_view(view, dashboard, entity_states=entity_states)
+
+    assert 'class="badges-bar"' in html
+    assert 'class="badge entity-filter-badge"' in html
+    assert "Kitchen On" in html
+    assert 'id="badge-0"' in html
+
+
+def test_badge_entity_filter_no_match():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [
+                    {
+                        "type": "entity-filter",
+                        "entity": "light.kitchen",
+                        "name": "Kitchen On",
+                        "conditions": [{"entity": "light.kitchen", "state": "on"}],
+                    },
+                ],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    entity_states = {"light.kitchen": {"entity_id": "light.kitchen", "state": "off"}}
+    html = render_view(view, dashboard, entity_states=entity_states)
+
+    assert 'class="badges-bar"' not in html
+    assert "Kitchen On" not in html
+
+
+def test_badge_entity_filter_no_conditions():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [
+                    {
+                        "type": "entity-filter",
+                        "entity": "light.kitchen",
+                        "name": "Kitchen",
+                        "conditions": [],
+                    },
+                ],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'class="badges-bar"' in html
+    assert "Kitchen" in html
+
+
+def test_badges_empty_list():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'class="badges-bar"' not in html
+
+
+def test_badges_no_badge_key():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "No Badges",
+                "path": "nb",
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'class="badges-bar"' not in html
+
+
+def test_css_link_loads_style_first():
+    from app.renderer import _css_link
+
+    html = _css_link("daylight")
+    assert '/static/style.css' in html
+    assert '/static/daylight.css' in html
+    assert html.index('/static/style.css') < html.index('/static/daylight.css')
+
+
+def test_badge_entity_filter_sse_trigger_wired():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [
+                    {
+                        "type": "entity-filter",
+                        "entity": "light.kitchen",
+                        "name": "Kitchen",
+                        "conditions": [{"entity": "light.kitchen", "state": "on"}],
+                    },
+                ],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    entity_states = {"light.kitchen": {"entity_id": "light.kitchen", "state": "on"}}
+    html = render_view(view, dashboard, entity_states=entity_states)
+
+    assert 'hx-trigger="sse:entity_light_kitchen"' in html
+    assert 'hx-get=' in html
+    assert '/badge/0' in html
+    assert 'hx-swap="outerHTML"' in html
+
+
 def test_favourite_values_no_lightdash_key():
     """Missing lightdash key should not emit data-fav-vals."""
     from app.parser import parse_dashboard

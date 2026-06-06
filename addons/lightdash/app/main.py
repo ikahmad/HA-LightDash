@@ -527,6 +527,36 @@ async def api_history(entity_id: str, hours: int = 24):
     return history or []
 
 
+@app.get("/api/view/{dashboard}/{view_path}/badge/{idx}")
+async def view_badge(dashboard: str, view_path: str, idx: int):
+    dashboards = getattr(app.state, "dashboards", {})
+    d = dashboards.get(dashboard)
+    if not d:
+        return HTMLResponse("", status_code=404)
+
+    ha = getattr(app.state, "ha_client", None)
+    entity_states = {}
+    if ha and ha.is_connected:
+        states = await ha.get_states()
+        if states:
+            entity_states = {s["entity_id"]: s for s in states}
+
+    for v in d.views:
+        if v.path == view_path:
+            if idx < 0 or idx >= len(v.badges):
+                return HTMLResponse("", status_code=404)
+            badge = v.badges[idx]
+            if badge.get("type") != "entity-filter":
+                return HTMLResponse("", status_code=400)
+
+            import app.renderer as r
+            r._entity_states = entity_states
+            html = r._render_entity_filter_badge(badge, idx, view_path)
+            return HTMLResponse(html, headers=_no_cache)
+
+    return HTMLResponse("", status_code=404)
+
+
 @app.get("/ha/image/serve/{path:path}")
 async def proxy_ha_image(path: str):
     config = getattr(app.state, "config", None)

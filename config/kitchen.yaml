@@ -10,7 +10,19 @@ views:
       image: /api/image/serve/df6d99dadd42ccd63e0d444628af8b75/original
     title: Home
     theme: Google Dark Theme
-    badges: []
+    badges:
+      - type: entity
+        entity: light.kitchen_main_lights
+        name: Kitchen
+      - type: entity
+        entity: light.kitchen_counters
+        name: Counters
+      - type: entity-filter
+        entity: cover.kitchen_roof
+        name: Roof open
+        conditions:
+          - entity: cover.kitchen_roof
+            state: open
     sections:
       - type: grid
         cards:
@@ -64,6 +76,8 @@ views:
             entity: cover.kitchen_roof
             name: Roof
             secondary_info: none
+            lightdash:
+              favourite_values: [25, 50, 75]
             grid_options:
               columns: 6
               rows: auto

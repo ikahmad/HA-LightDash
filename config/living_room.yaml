@@ -7,7 +7,25 @@ views:
   - type: sections
     max_columns: 1
     title: Home
-    badges: []
+    badges:
+      - type: entity
+        entity: light.porch
+        name: Porch
+      - type: entity
+        entity: light.entryway
+        name: Entryway
+      - type: shortcut
+        icon: mdi:arrow-right-bold
+        label: Other Rooms
+        tap_action:
+          action: navigate
+          navigation_path: other-rooms
+      - type: entity-filter
+        entity: input_number.home_comfort_temperature
+        name: Comfort
+        conditions:
+          - entity: input_number.home_comfort_temperature
+            state: "21"
     sections:
       - type: grid
         cards:

@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.14.0 (2026-06-06)
+- **Added:** Badges bar on views — three badge types: `entity` (icon+name+live state, tap toggles binary entities), `shortcut` (icon+label, navigate to view or open URL), and `entity-filter` (conditionally shown based on entity state, with static render-time evaluation)
+- **Added:** Dynamic endpoint `GET /api/view/{dashboard}/{view_path}/badge/{idx}` for re-evaluating entity-filter badges on SSE trigger
+- **Added:** Badge CSS base styles in `style.css` and colour overrides in all 10 theme files via CSS variables (`--control-bg`, `--control-text`, `--text-faint`)
+- **Added:** 12 unit tests covering all badge types, edge cases (empty list, missing keys), and SSE trigger wiring
+- **Added:** README section with YAML examples for all three badge types
+- **Changed:** `_css_link()` now emits base `style.css` before theme CSS so theme overrides always apply
+- **Changed:** Example configs (`living_room.yaml`, `kitchen.yaml`) populated with real badge configurations
+
 ## v0.13.4 (2026-06-06)
 - **Added:** Favourite brightness/position shortcuts — configure up to 4 preset values per light or cover under `lightdash.favourite_values` (e.g. `[25, 50, 75, 100]`). Appears as tap-able buttons in the long-press dimmer/cover modal
 - **Added:** 10 unit tests validating `favourite_values` parsing, max-4 truncation, bounds filtering, non-numeric rejection, and empty/missing key handling

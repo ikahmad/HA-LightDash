@@ -1,3 +1,14 @@
+# Release Notes for v0.14.0 (2026-06-06)
+
+Badges add compact context-aware controls to the top of any view — entity state at a glance, quick navigation, and conditional pills that appear and disappear based on what's happening in your home.
+
+- **Entity badges:** Add `type: entity` badges to any view and see the entity icon, name, and live state in a compact pill. Tap a light, switch, or binary sensor badge to toggle it on or off — state updates arrive in real time.
+- **Shortcut badges:** `type: shortcut` badges let you navigate to another view or open an external URL with a single tap. Perfect for quick links between dashboards or jumping to your Home Assistant frontend.
+- **Entity-filter badges:** `type: entity-filter` badges only show when their conditions are met — for example, a "Roof open" badge that appears only when `cover.kitchen_roof` is in the `open` state. The badge re-evaluates via SSE so it appears and disappears dynamically.
+- **Badges in example configs:** `living_room.yaml` now has entity badges for the porch and entryway lights plus a shortcut to "Other Rooms". `kitchen.yaml` has entity badges for kitchen lights and a filter badge for the roof.
+
+---
+
 # Release Notes for v0.13.4 (2026-06-06)
 
 Favourite brightness shortcuts let you tap preset values in the dimmer and cover modals, so you don't always have to drag the slider.
