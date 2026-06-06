@@ -8,6 +8,8 @@ LightDash is designed to handle copy-and-pasted YAML from existing dashboards wi
 
 **Caveat 2:** Yep, I used OpenCode to build a lot of this. I'm a 25+ year software architect and developer, but this is a one-day project. I'm pretty happy it's not filled with slop - I've reviewed it and it's passable - but I make no warranties about code quality this early in its life.
 
+![LightDash](../../example-images/example-lightdash.png)
+
 ---
 
 ## Badges
@@ -63,3 +65,17 @@ badges:
 ```
 
 Conditions use AND logic — all must match for the badge to show. Omit `conditions` to always show the badge (behaves like an entity badge but without the live state span).
+
+![Badges](../../example-images/example-badges.png)
+
+## Feature Previews
+
+![Clock](../../example-images/example-clock.png)
+
+![Weather card](../../example-images/example-weather.png)
+
+![Dimmer modal](../../example-images/example-modal.png)
+
+![Favourite values](../../example-images/example-popup-favourites.png)
+
+![Themes](../../example-images/readme-themes.png)
