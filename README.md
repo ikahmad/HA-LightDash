@@ -11,6 +11,8 @@ LightDash is designed to handle copy-and-pasted YAML from existing dashboards wi
 
 **Caveat 2:** Yep, I used OpenCode to build a lot of this. I'm a 25+ year software architect and developer, but this started as a one-day project. I'm pretty happy it's not filled with slop - I've reviewed it and it's passable - but I make no warranties about code quality this early in its life.
 
+![LightDash](example-images/example-lightdash.png)
+
 Installation
 ------------
 
@@ -175,6 +177,8 @@ lightdash:
                                    #   (0=disabled)
 ```
 
+![Themes](example-images/readme-themes.png)
+
 ### View fields
 
 | Field         | Description                                        |
@@ -249,6 +253,17 @@ Cover entities support a **long-press position modal** — a vertical position
 slider with open/stop/close buttons (see
 [Long-Press Modals](#long-press-modals) below).
 
+Both light and cover tiles accept a `lightdash.favourite_values` list to add
+shortcut buttons to their long-press modal (see
+[Favourite Values](#favourite-values) below).
+
+```yaml
+type: tile
+entity: light.living_room
+lightdash:
+  favourite_values: [25, 50, 75, 100]
+```
+
 ### entities
 
 A grouped list of entity rows, each with icon, name, state, and controls.
@@ -270,6 +285,17 @@ entities:
 
 Cover entities automatically get open/stop/close buttons.
 Binary non-cover entities get a toggle switch.
+
+Light and cover entity rows also accept `lightdash.favourite_values` for
+shortcut buttons in the long-press modal:
+
+```yaml
+type: entities
+entities:
+  - entity: light.kitchen
+    lightdash:
+      favourite_values: [25, 50, 75, 100]
+```
 
 ### button
 
@@ -359,9 +385,30 @@ type: clock
 time_zone: Europe/London
 time_format: "24"           # or "12"
 show_seconds: false
-clock_size: large           # small / medium / large
+clock_size: large           # small, medium, large, "150%" (percent), "fit" (auto-size), "fit 75%" (auto-size then scale)
 no_background: true
 ```
+
+`clock_size` accepts named sizes (`small`, `medium`, `large`), a percentage
+string like `"150%"` to scale the text, `"fit"` to auto-size text to fill
+the card width without wrapping, or `"fit 75%"` to auto-size and then scale
+down to 75% of the fill width.
+
+#### Date line (via `lightdash`)
+
+Show the current date below the time. Options are nested under `lightdash` to
+make explicit they are LightDash-specific extensions:
+
+```yaml
+type: clock
+clock_size: large
+lightdash:
+  date_show: true
+  date_format: default         # default (toDateString), iso (toISOString), locale (toLocaleDateString)
+  date_fontsize: "80%"         # same options as clock_size (%, fit, fit 75%)
+```
+
+![Clock](example-images/example-clock.png)
 
 ### sensor
 
@@ -475,6 +522,8 @@ Current conditions show the condition icon, condition name, temperature, and
 secondary info. Forecast items are laid out horizontally (fill width for ≤5
 items, scroll for more).
 
+![Weather](example-images/example-weather.png)
+
 ### placeholder
 
 Rendered when a card type is unknown. Displays a `?` placeholder.
@@ -492,36 +541,39 @@ A vertical brightness slider with tap-to-toggle on the light icon. Drag up/down
 to set brightness — value is sent on release. Tap the icon to toggle on/off
 (turning on restores the last brightness).
 
-```
-┌─────────────────────┐
-│  Living Room     ✕  │
-│ ┌────┐              │
-│ │    │   ┌────┐     │
-│ │ ▓▓ │   │ 💡 │     │
-│ │ ▓▓ │   │ 72%│     │
-│ │ ▓▓ │   └────┘     │
-│ │ ▓▓ │              │
-│ └────┘              │
-└─────────────────────┘
-```
+![Dimmer modal](example-images/example-modal.png)
 
 ### Cover Position
 
-A vertical position slider with open/stop/close buttons alongside. Drag to set
+A vertical position slider with open/stop/close buttons alongside, just like the dimmer above. Drag to set
 a precise position, or tap the up/stop/down buttons for full open, halt, or
 full close.
 
+
+### Favourite Values
+
+Configure up to 4 preset brightness or position values to appear as
+tap-able buttons in the long-press modal. Set them under
+`lightdash.favourite_values` on any tile or entity row:
+
+```yaml
+type: tile
+entity: light.living_room
+lightdash:
+  favourite_values: [25, 50, 75, 100]
 ```
-┌─────────────────────┐
-│  Kitchen Roof    ✕  │
-│ ┌────┐    ┌───┐     │
-│ │    │    │ ▲ │     │
-│ │ ▓▓ │    │ 50│     │
-│ │ ▓▓ │    │ ⏹ │     │
-│ │ ▓▓ │    │ ▼ │     │
-│ └────┘    └───┘     │
-└─────────────────────┘
-```
+
+Each value must be an integer or float between 0 and 100. Values outside that
+range are silently ignored. If more than 4 values are provided, only the
+first 4 are used.
+
+The buttons appear vertically on the left side of the modal, distributed
+evenly top-to-bottom (highest to lowest):
+
+![Favourite values](example-images/example-popup-favourites.png)
+
+Tap a favourite button to set the brightness or position immediately.
+The slider updates to match.
 
 ### Auto-Close
 
@@ -572,6 +624,16 @@ never sees the original type.
 - Any other `custom:*` card type
 
 
+Badges
+------
+
+Badges are compact pills that sit above the cards in a view. They show entity state at a glance, navigate between views, or conditionally appear based on entity state.
+
+![Badges](example-images/example-badges.png)
+
+Three badge types are supported — `entity`, `shortcut`, and `entity-filter`. See the [addon README](addons/lightdash/README.md#badges) for YAML examples.
+
+
 Compatibility Checker
 ---------------------
 
@@ -600,14 +662,14 @@ Architecture
 ┌──────────────────────────────────────────────────────────────────┐
 │                        LightDash (FastAPI)                       │
 │                                                                  │
-│  ┌──────────┐   ┌──────────┐   ┌──────────────┐                 │
-│  │  parser   │◄──│  config  │◄──│  *yaml files  │  or inline     │
-│  │  .py      │   │  .py     │   │  config/      │  add-on config │
-│  └────┬─────┘   └──────────┘   └──────────────┘                 │
+│  ┌──────────┐   ┌──────────┐   ┌──────────────┐                  │
+│  │  parser  │◄──│  config  │◄──│  *yaml files  │  or inline      │
+│  │  .py     │   │  .py     │   │  config/      │  add-on config  │
+│  └────┬─────┘   └──────────┘   └──────────────┘                  │
 │       │ Dashboard / View / Card models                           │
 │       ▼                                                          │
 │  ┌──────────┐                                                    │
-│  │ renderer │────► HTML + CSS + JS  (htmx + SSE)                │
+│  │ renderer │────► HTML + CSS + JS  (htmx + SSE)                 │
 │  │  .py     │                                                    │
 │  └──────────┘                                                    │
 │       │                                                          │
@@ -617,8 +679,8 @@ Architecture
 │  └──────────┘   └──────┬───────┘                                 │
 │                        │                                         │
 │  ┌──────────┐          │                                         │
-│  │   sse    │◄─────────┘  WebSocket /api/websocket              │
-│  │ manager  │──► SSE /_sse  (entity state events)               │
+│  │   sse    │◄─────────┘  WebSocket /api/websocket               │
+│  │ manager  │──► SSE /_sse  (entity state events)                │
 │  └──────────┘                                                    │
 └──────────────────────────────────────────────────────────────────┘
         │

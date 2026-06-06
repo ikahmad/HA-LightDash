@@ -295,7 +295,7 @@ html, body {
 .gauge-name { font-size: 0.85rem; color: var(--text-faint); margin-top: 4px; }
 
 /* ----- Clock Card ----- */
-.clock-card { display: flex; align-items: center; justify-content: center; }
+.clock-card { display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .clock-card.clock-no-bg { background: transparent; border: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; padding: 4px; }
 .clock-digital { font-variant-numeric: tabular-nums; color: var(--heading); font-weight: var(--clock-weight, 300); letter-spacing: var(--clock-spacing, 0); font-family: var(--font-data, inherit); }
 .clock-size-small .clock-digital { font-size: 1.8rem; }
@@ -387,6 +387,9 @@ html, body {
   width: 34px; height: 5px; border-radius: 3px; background: var(--dimmer-grip, rgba(0,0,0,0.28));
 }
 .dimmer-thumb { position: absolute; left: 50%; transform: translateX(-50%); width: 34px; height: 5px; border-radius: 3px; background: var(--dimmer-grip, rgba(0,0,0,0.28)); }
+.dimmer-left, .cover-left { display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; flex-shrink: 0; width: 48px; }
+.dimmer-fav-btn, .cover-fav-btn { width: 40px; height: 40px; border: none; border-radius: 50%; background: #2a2a2a; color: #ccc; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; padding: 0; }
+.dimmer-fav-btn:active, .cover-fav-btn:active { background: #3a3a3a; }
 .dimmer-right { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 14px; width: 72px; flex-shrink: 0; padding-bottom: 6px; }
 .dimmer-icon { cursor: pointer; display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: var(--radius-sm); }
 .dimmer-icon:active { filter: brightness(0.9); }
@@ -620,4 +623,16 @@ html, body {
   font-weight: 600;
   text-align: center;
   font-variant-numeric: tabular-nums;
+}
+
+/* ----- Badges Bar ----- */
+.badge {
+  background: var(--control-bg);
+  color: var(--control-text);
+}
+.badge:active {
+  filter: brightness(0.9);
+}
+.entity-badge .entity-state {
+  color: var(--text-faint);
 }

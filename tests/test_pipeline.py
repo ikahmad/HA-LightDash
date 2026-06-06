@@ -458,6 +458,138 @@ def test_clock_card_renderer():
     assert 'Intl.DateTimeFormat("en-GB"' in html or "Intl.DateTimeFormat" in html
 
 
+def test_clock_size_percent():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "clock_size": "150%"}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert 'style="font-size: 150%"' in html
+
+
+def test_clock_size_fit():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "clock_size": "fit"}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert "icey_text_fit" in html
+    assert "/static/scripts.js" in html
+    assert "icey_textFit()" in html
+
+
+def test_clock_fit_retriggers_on_uclk():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "clock_size": "fit"}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert 'typeof icey_textFit==="function")icey_textFit()' in html
+
+
+def test_clock_date_default():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "lightdash": {"date_show": True}}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert "clock-date" in html
+    assert 'data-dfmt="default"' in html
+    assert "toDateString()" in html
+
+
+def test_clock_date_iso():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "lightdash": {"date_show": True, "date_format": "iso"}}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert 'data-dfmt="iso"' in html
+    assert 'toISOString().split("T")[0]' in html
+
+
+def test_clock_date_locale():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "lightdash": {"date_show": True, "date_format": "locale"}}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert 'data-dfmt="locale"' in html
+    assert "toLocaleDateString()" in html
+
+
+def test_clock_date_fontsize():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "lightdash": {"date_show": True, "date_fontsize": "80%"}}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert 'style="font-size: 80%"' in html
+
+
+def test_clock_date_fontsize_fit_triggers_scripts():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "lightdash": {"date_show": True, "date_fontsize": "fit"}}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert "icey_text_fit" in html
+    assert "/static/scripts.js" in html
+    assert "icey_textFit()" in html
+
+
+def test_clock_size_fit_pct():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "clock_size": "fit 75%"}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert "icey_text_fit" in html
+    assert 'data-fit-pct="75"' in html
+    assert "/static/scripts.js" in html
+
+
+def test_clock_date_fontsize_fit_pct():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "lightdash": {"date_show": True, "date_fontsize": "fit 50%"}}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert "icey_text_fit" in html
+    assert 'data-fit-pct="50"' in html
+    assert "/static/scripts.js" in html
+
+
 def test_entity_toggle_in_entities_card():
     from app.parser import parse_dashboard
     from app.renderer import render_view
@@ -948,3 +1080,566 @@ def test_tile_cover_controls():
     toggle_actions = html.count('hx-post="/action"')
     # Light tile has 1 action (toggle on body), cover has 3 actions (open/stop/close)
     assert toggle_actions >= 3
+
+
+def test_tile_favourite_values_light():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Lights",
+                "path": "lights",
+                "cards": [
+                    {
+                        "type": "tile",
+                        "entity": "light.test",
+                        "name": "Test Light",
+                        "lightdash": {
+                            "favourite_values": [25, 50, 75, 100],
+                        },
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="25,50,75,100"' in html
+    assert 'data-light-entity="light.test"' in html
+
+
+def test_tile_favourite_values_cover():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Covers",
+                "path": "covers",
+                "cards": [
+                    {
+                        "type": "tile",
+                        "entity": "cover.garage",
+                        "name": "Garage",
+                        "lightdash": {
+                            "favourite_values": [0, 50, 100],
+                        },
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="0,50,100"' in html
+    assert 'data-cover-entity="cover.garage"' in html
+
+
+def test_entities_favourite_values_light():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Entities",
+                "path": "ents",
+                "cards": [
+                    {
+                        "type": "entities",
+                        "entities": [
+                            {
+                                "entity": "light.kitchen",
+                                "lightdash": {"favourite_values": [1, 10, 50, 99]},
+                            },
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="1,10,50,99"' in html
+    assert 'data-light-entity="light.kitchen"' in html
+
+
+def test_entities_favourite_values_cover():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Entities",
+                "path": "ents",
+                "cards": [
+                    {
+                        "type": "entities",
+                        "entities": [
+                            {
+                                "entity": "cover.garage",
+                                "lightdash": {"favourite_values": [0, 100]},
+                            },
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="0,100"' in html
+    assert 'data-cover-entity="cover.garage"' in html
+
+
+def test_favourite_values_truncation():
+    """Only first 4 values should be emitted."""
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Lights",
+                "path": "lights",
+                "cards": [
+                    {
+                        "type": "tile",
+                        "entity": "light.test",
+                        "lightdash": {"favourite_values": [10, 20, 30, 40, 50]},
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="10,20,30,40"' in html
+    assert 'data-fav-vals="10,20,30,40,50"' not in html
+
+
+def test_favourite_values_bounds_filtering():
+    """Values outside 0-100 should be filtered out."""
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Lights",
+                "path": "lights",
+                "cards": [
+                    {
+                        "type": "tile",
+                        "entity": "light.test",
+                        "lightdash": {"favourite_values": [-1, 0, 50, 100, 101]},
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="0,50,100"' in html
+
+
+def test_favourite_values_non_numeric_filtered():
+    """Non-numeric values (strings) should be filtered out."""
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Lights",
+                "path": "lights",
+                "cards": [
+                    {
+                        "type": "tile",
+                        "entity": "light.test",
+                        "lightdash": {"favourite_values": ["foo", 50, None, 75]},
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="50,75"' in html
+
+
+def test_favourite_values_empty_list_no_attribute():
+    """Empty favourite_values list should not emit data-fav-vals."""
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Lights",
+                "path": "lights",
+                "cards": [
+                    {
+                        "type": "tile",
+                        "entity": "light.test",
+                        "lightdash": {"favourite_values": []},
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="' not in html
+
+
+def test_badge_entity_renders():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [
+                    {"type": "entity", "entity": "sensor.temp", "name": "Temp"},
+                ],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'class="badges-bar"' in html
+    assert 'class="badge entity-badge"' in html
+    assert 'class="badge-name"' in html
+    assert "Temp" in html
+    assert 'data-entity="sensor.temp"' in html
+
+
+def test_badge_entity_binary_toggle():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [
+                    {"type": "entity", "entity": "light.kitchen", "name": "Kitchen"},
+                ],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'class="badge entity-badge"' in html
+    assert 'hx-post="/action"' in html
+    assert "light.toggle" in html
+
+
+def test_badge_shortcut_navigate():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [
+                    {
+                        "type": "shortcut",
+                        "icon": "mdi:home",
+                        "label": "Home",
+                        "tap_action": {"action": "navigate", "navigation_path": "home"},
+                    },
+                ],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard, dashboard_name="test_dash")
+
+    assert 'class="badge shortcut-badge"' in html
+    assert "badge-name" in html
+    assert "Home" in html
+    assert 'hx-get="/d/test_dash/view/home"' in html
+    assert 'hx-target="body"' in html
+
+
+def test_badge_shortcut_url():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [
+                    {
+                        "type": "shortcut",
+                        "label": "HA",
+                        "tap_action": {"action": "url", "url_path": "http://ha.local:8123"},
+                    },
+                ],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'class="badge shortcut-badge"' in html
+    assert "window.open" in html
+    assert "http://ha.local:8123" in html
+
+
+def test_badge_entity_filter_matches():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [
+                    {
+                        "type": "entity-filter",
+                        "entity": "light.kitchen",
+                        "name": "Kitchen On",
+                        "conditions": [{"entity": "light.kitchen", "state": "on"}],
+                    },
+                ],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    entity_states = {"light.kitchen": {"entity_id": "light.kitchen", "state": "on"}}
+    html = render_view(view, dashboard, entity_states=entity_states)
+
+    assert 'class="badges-bar"' in html
+    assert 'class="badge entity-filter-badge"' in html
+    assert "Kitchen On" in html
+    assert 'id="badge-0"' in html
+
+
+def test_badge_entity_filter_no_match():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [
+                    {
+                        "type": "entity-filter",
+                        "entity": "light.kitchen",
+                        "name": "Kitchen On",
+                        "conditions": [{"entity": "light.kitchen", "state": "on"}],
+                    },
+                ],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    entity_states = {"light.kitchen": {"entity_id": "light.kitchen", "state": "off"}}
+    html = render_view(view, dashboard, entity_states=entity_states)
+
+    assert 'class="badges-bar"' not in html
+    assert "Kitchen On" not in html
+
+
+def test_badge_entity_filter_no_conditions():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [
+                    {
+                        "type": "entity-filter",
+                        "entity": "light.kitchen",
+                        "name": "Kitchen",
+                        "conditions": [],
+                    },
+                ],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'class="badges-bar"' in html
+    assert "Kitchen" in html
+
+
+def test_badges_empty_list():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'class="badges-bar"' not in html
+
+
+def test_badges_no_badge_key():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "No Badges",
+                "path": "nb",
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'class="badges-bar"' not in html
+
+
+def test_css_link_loads_style_first():
+    from app.renderer import _css_link
+
+    html = _css_link("daylight")
+    assert '/static/style.css' in html
+    assert '/static/daylight.css' in html
+    assert html.index('/static/style.css') < html.index('/static/daylight.css')
+
+
+def test_badge_entity_filter_sse_trigger_wired():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw = {
+        "views": [
+            {
+                "title": "Badge Test",
+                "path": "bt",
+                "badges": [
+                    {
+                        "type": "entity-filter",
+                        "entity": "light.kitchen",
+                        "name": "Kitchen",
+                        "conditions": [{"entity": "light.kitchen", "state": "on"}],
+                    },
+                ],
+                "cards": [
+                    {"type": "entity", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    entity_states = {"light.kitchen": {"entity_id": "light.kitchen", "state": "on"}}
+    html = render_view(view, dashboard, entity_states=entity_states)
+
+    assert 'hx-trigger="sse:entity_light_kitchen"' in html
+    assert 'hx-get=' in html
+    assert '/badge/0' in html
+    assert 'hx-swap="outerHTML"' in html
+
+
+def test_favourite_values_no_lightdash_key():
+    """Missing lightdash key should not emit data-fav-vals."""
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "title": "Lights",
+                "path": "lights",
+                "cards": [
+                    {
+                        "type": "tile",
+                        "entity": "light.test",
+                    }
+                ],
+            }
+        ]
+    }
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert 'data-fav-vals="' not in html

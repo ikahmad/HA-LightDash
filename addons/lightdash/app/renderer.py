@@ -58,7 +58,7 @@ _DEFAULT_THEME = "ha-dark"
 def _css_link(theme: str = "") -> str:
     if not theme:
         theme = _DEFAULT_THEME
-    return '<link rel="stylesheet" href="' + _url(f"/static/{theme}.css") + '">\n'
+    return '<link rel="stylesheet" href="' + _url("/static/style.css") + '">\n<link rel="stylesheet" href="' + _url(f"/static/{theme}.css") + '">\n'
 
 _entity_icons: Dict[str, str] = {}
 _entity_states: Dict[str, Any] = {}
@@ -218,17 +218,26 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
     if _view_needs_clock(view):
         head_extra += (
             '<script>\n'
-            'function uclk(){document.querySelectorAll(".clock-digital").forEach('
+            'function uclk(){var n=new Date();'
+            'document.querySelectorAll(".clock-digital").forEach('
             'function(e){var o={hour:"2-digit",minute:"2-digit",'
             'timeZone:e.getAttribute("data-tz")||"Europe/London",'
             'hour12:e.getAttribute("data-fmt")!=="24"};'
             'if(e.getAttribute("data-sec"))o.second="2-digit";'
-            'e.textContent=(new Intl.DateTimeFormat("en-GB",o)).format(new Date())})}\n'
+            'e.textContent=(new Intl.DateTimeFormat("en-GB",o)).format(n)});'
+            'document.querySelectorAll(".clock-date").forEach('
+            'function(e){var df=e.getAttribute("data-dfmt")||"default";'
+            'if(df==="iso")e.textContent=n.toISOString().split("T")[0];'
+            'else if(df==="locale")e.textContent=n.toLocaleDateString();'
+            'else e.textContent=n.toDateString()});if(typeof icey_textFit==="function")icey_textFit()}\n'
              'setInterval(uclk,30000);\n'
              'document.addEventListener("DOMContentLoaded",uclk);\n'
              'document.addEventListener("htmx:afterSwap",uclk);\n'
              '</script>\n'
         )
+    needs_fit_text = _view_needs_fit_text(view)
+    if needs_fit_text:
+        head_extra += '<script src="' + _url("/static/scripts.js") + '"></script>\n'
     modal_html = ""
     body_script = ""
 
@@ -252,6 +261,7 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             '<button class="dimmer-close" id="dimmer-close-btn">&#x2715;</button>\n'
             '</div>\n'
             '<div class="dimmer-body">\n'
+            '<div class="dimmer-left" id="dimmer-left"></div>\n'
             '<div class="dimmer-slider-wrap">\n'
             '<div class="dimmer-track" id="dimmer-track">\n'
             '<div class="dimmer-fill" id="dimmer-fill"></div>\n'
@@ -295,7 +305,7 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'navigator.sendBeacon("' + _url("/action") + '",JSON.stringify({entity_id:_curEid,action:"call-service",service:"light.turn_on",data:{brightness_pct:_curBri}}));\n'
             '}\n'
 
-            'function showDimmer(eid,ename,ebri,isOn,iconSvg){\n'
+            'function showDimmer(eid,ename,ebri,isOn,iconSvg,favVals){\n'
             '_curEid=eid;\n'
             'nameEl.textContent=ename||"";\n'
             'var b=isOn?Math.max(0,Math.min(100,Math.round((ebri||0)/255*100))):0;\n'
@@ -304,6 +314,8 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'setBri(b);\n'
             + auto_close_timer +
             'm.style.display="";\n'
+            'var leftEl=document.getElementById("dimmer-left");\n'
+            'if(leftEl){leftEl.innerHTML="";if(favVals){favVals.split(",").forEach(function(v){var btn=document.createElement("button");btn.textContent=v+"%";btn.className="dimmer-fav-btn";btn.addEventListener("click",function(){setBri(parseInt(v));sendBri();' + auto_close_reset + '});leftEl.appendChild(btn)})}}\n'
             '}\n'
 
             'function hideDimmer(){m.style.display="none";_curEid=""}\n'
@@ -334,11 +346,15 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'track.addEventListener("touchstart",function(e){_drag=true;dragY(e.touches[0].clientY);' + auto_close_reset + '},true);\n'
             'track.addEventListener("touchmove",function(e){if(_drag){e.preventDefault();dragY(e.touches[0].clientY)}},true);\n'
             'track.addEventListener("touchend",function(e){if(_drag){_drag=false;sendBri();' + auto_close_reset + '}},true);\n'
+            'track.addEventListener("mousedown",function(e){_drag=true;dragY(e.clientY);' + auto_close_reset + '},true);\n'
+            'document.addEventListener("mousemove",function(e){if(_drag){e.preventDefault();dragY(e.clientY)}},true);\n'
+            'document.addEventListener("mouseup",function(e){if(_drag){_drag=false;sendBri();' + auto_close_reset + '}},true);\n'
 
             'document.addEventListener("touchstart",function(e){\n'
             'var row=e.target.closest(".tile-card[data-light-entity],.entity-row[data-light-entity]");\n'
             'if(!row)return;\n'
             'var eid=row.getAttribute("data-light-entity");\n'
+            'var favVals=row.getAttribute("data-fav-vals")||"";\n'
             '_lpTimer=setTimeout(function(){\n'
             'var ename=(row.querySelector(".tile-name")||row.querySelector(".entity-name")||{}).textContent||"";\n'
             'var iconEl2=row.querySelector(".tile-icon svg,.entity-icon svg");\n'
@@ -347,11 +363,11 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'if(d&&!d.error){\n'
             'var isOn=d.state==="on";\n'
             'var ebri=(d.attributes&&d.attributes.brightness)||0;\n'
-            'showDimmer(eid,ename,ebri,isOn,iconSvg);\n'
+            'showDimmer(eid,ename,ebri,isOn,iconSvg,favVals);\n'
             '}else{\n'
-            'showDimmer(eid,ename,0,false,iconSvg);\n'
+            'showDimmer(eid,ename,0,false,iconSvg,favVals);\n'
             '}\n'
-            '}).catch(function(){showDimmer(eid,ename,0,false,iconSvg)});\n'
+            '}).catch(function(){showDimmer(eid,ename,0,false,iconSvg,favVals)});\n'
 
             'var blocker=function(ev){ev.preventDefault();ev.stopPropagation();document.removeEventListener("click",blocker,true)};\n'
             'document.addEventListener("click",blocker,true);\n'
@@ -363,6 +379,38 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             '},true);\n'
 
             'document.addEventListener("touchend",function(e){\n'
+            'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
+            '},true);\n'
+
+            'document.addEventListener("mousedown",function(e){\n'
+            'var row=e.target.closest(".tile-card[data-light-entity],.entity-row[data-light-entity]");\n'
+            'if(!row)return;\n'
+            'var eid=row.getAttribute("data-light-entity");\n'
+            'var favVals=row.getAttribute("data-fav-vals")||"";\n'
+            '_lpTimer=setTimeout(function(){\n'
+            'var ename=(row.querySelector(".tile-name")||row.querySelector(".entity-name")||{}).textContent||"";\n'
+            'var iconEl2=row.querySelector(".tile-icon svg,.entity-icon svg");\n'
+            'var iconSvg=iconEl2?iconEl2.outerHTML:"";\n'
+            'fetch("' + _url("/api/state/") + '"+encodeURIComponent(eid)).then(function(r){return r.json()}).then(function(d){\n'
+            'if(d&&!d.error){\n'
+            'var isOn=d.state==="on";\n'
+            'var ebri=(d.attributes&&d.attributes.brightness)||0;\n'
+            'showDimmer(eid,ename,ebri,isOn,iconSvg,favVals);\n'
+            '}else{\n'
+            'showDimmer(eid,ename,0,false,iconSvg,favVals);\n'
+            '}\n'
+            '}).catch(function(){showDimmer(eid,ename,0,false,iconSvg,favVals)});\n'
+            '\n'
+            'var blocker=function(ev){ev.preventDefault();ev.stopPropagation();document.removeEventListener("click",blocker,true)};\n'
+            'document.addEventListener("click",blocker,true);\n'
+            '},500);\n'
+            '},true);\n'
+            '\n'
+            'document.addEventListener("mousemove",function(e){\n'
+            'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
+            '},true);\n'
+            '\n'
+            'document.addEventListener("mouseup",function(e){\n'
             'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
             '},true);\n'
 
@@ -388,6 +436,7 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             '<button class="cover-close" id="cover-close-btn">&#x2715;</button>\n'
             '</div>\n'
             '<div class="cover-body">\n'
+            '<div class="cover-left" id="cover-left"></div>\n'
             '<div class="cover-slider-wrap">\n'
             '<div class="cover-track" id="cover-track">\n'
             '<div class="cover-fill" id="cover-fill"></div>\n'
@@ -441,13 +490,15 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'navigator.sendBeacon("' + _url("/action") + '",JSON.stringify({entity_id:_curEid,action:"call-service",service:svc}));\n'
             '}\n'
 
-            'function showCover(eid,ename,epos){\n'
+            'function showCover(eid,ename,epos,favVals){\n'
             '_curEid=eid;\n'
             'nameEl.textContent=ename||"";\n'
             'var p=epos!==null&&epos!==undefined?Math.max(0,Math.min(100,Math.round(epos))):50;\n'
             'setPos(p);\n'
             + auto_close_timer +
             'm.style.display="";\n'
+            'var leftEl=document.getElementById("cover-left");\n'
+            'if(leftEl){leftEl.innerHTML="";if(favVals){favVals.split(",").forEach(function(v){var btn=document.createElement("button");btn.textContent=v+"%";btn.className="cover-fav-btn";btn.addEventListener("click",function(){setPos(parseInt(v));sendPos();' + auto_close_reset + '});leftEl.appendChild(btn)})}}\n'
             '}\n'
 
             'function hideCover(){m.style.display="none";_curEid=""}\n'
@@ -468,21 +519,25 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'track.addEventListener("touchstart",function(e){_drag=true;dragY(e.touches[0].clientY);' + auto_close_reset + '},true);\n'
             'track.addEventListener("touchmove",function(e){if(_drag){e.preventDefault();dragY(e.touches[0].clientY)}},true);\n'
             'track.addEventListener("touchend",function(e){if(_drag){_drag=false;sendPos();' + auto_close_reset + '}},true);\n'
+            'track.addEventListener("mousedown",function(e){_drag=true;dragY(e.clientY);' + auto_close_reset + '},true);\n'
+            'document.addEventListener("mousemove",function(e){if(_drag){e.preventDefault();dragY(e.clientY)}},true);\n'
+            'document.addEventListener("mouseup",function(e){if(_drag){_drag=false;sendPos();' + auto_close_reset + '}},true);\n'
 
             'document.addEventListener("touchstart",function(e){\n'
             'var row=e.target.closest(".tile-card[data-cover-entity],.entity-row[data-cover-entity]");\n'
             'if(!row)return;\n'
             'var eid=row.getAttribute("data-cover-entity");\n'
+            'var favVals=row.getAttribute("data-fav-vals")||"";\n'
             '_lpTimer=setTimeout(function(){\n'
             'var ename=(row.querySelector(".tile-name")||row.querySelector(".entity-name")||{}).textContent||"";\n'
             'fetch("' + _url("/api/state/") + '"+encodeURIComponent(eid)).then(function(r){return r.json()}).then(function(d){\n'
             'if(d&&!d.error){\n'
             'var epos=(d.attributes&&d.attributes.current_position);\n'
-            'showCover(eid,ename,epos);\n'
+            'showCover(eid,ename,epos,favVals);\n'
             '}else{\n'
-            'showCover(eid,ename,50);\n'
+            'showCover(eid,ename,50,favVals);\n'
             '}\n'
-            '}).catch(function(){showCover(eid,ename,50)});\n'
+            '}).catch(function(){showCover(eid,ename,50,favVals)});\n'
 
             'var blocker=function(ev){ev.preventDefault();ev.stopPropagation();document.removeEventListener("click",blocker,true)};\n'
             'document.addEventListener("click",blocker,true);\n'
@@ -494,6 +549,35 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             '},true);\n'
 
             'document.addEventListener("touchend",function(e){\n'
+            'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
+            '},true);\n'
+
+            'document.addEventListener("mousedown",function(e){\n'
+            'var row=e.target.closest(".tile-card[data-cover-entity],.entity-row[data-cover-entity]");\n'
+            'if(!row)return;\n'
+            'var eid=row.getAttribute("data-cover-entity");\n'
+            'var favVals=row.getAttribute("data-fav-vals")||"";\n'
+            '_lpTimer=setTimeout(function(){\n'
+            'var ename=(row.querySelector(".tile-name")||row.querySelector(".entity-name")||{}).textContent||"";\n'
+            'fetch("' + _url("/api/state/") + '"+encodeURIComponent(eid)).then(function(r){return r.json()}).then(function(d){\n'
+            'if(d&&!d.error){\n'
+            'var epos=(d.attributes&&d.attributes.current_position);\n'
+            'showCover(eid,ename,epos,favVals);\n'
+            '}else{\n'
+            'showCover(eid,ename,50,favVals);\n'
+            '}\n'
+            '}).catch(function(){showCover(eid,ename,50,favVals)});\n'
+            '\n'
+            'var blocker=function(ev){ev.preventDefault();ev.stopPropagation();document.removeEventListener("click",blocker,true)};\n'
+            'document.addEventListener("click",blocker,true);\n'
+            '},500);\n'
+            '},true);\n'
+            '\n'
+            'document.addEventListener("mousemove",function(e){\n'
+            'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
+            '},true);\n'
+            '\n'
+            'document.addEventListener("mouseup",function(e){\n'
             'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
             '},true);\n'
 
@@ -518,6 +602,10 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             '</script>\n'
         )
 
+    body_tail = ""
+    if needs_fit_text:
+        body_tail = '<script>window.addEventListener("DOMContentLoaded",()=>{icey_textFit()});</script>\n'
+
     return (
         '<!DOCTYPE html>\n'
         '<html lang="en">\n'
@@ -534,9 +622,11 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
         '<body>\n'
         + body_script +
         '<div class="lv-view" id="view-' + path + '" hx-ext="sse" sse-connect="' + _url("/_sse") + '" style="' + bg + '">\n'
+        + _render_badges(view)
         + cards_html + '\n'
         + '</div>\n'
         + modal_html
+        + body_tail
         + '</body>\n'
         + '</html>'
     )
@@ -751,6 +841,118 @@ def _view_needs_clock(view: View) -> bool:
         if c.type == "clock":
             return True
     return False
+
+
+def _view_needs_fit_text(view: View) -> bool:
+    check_cards = view.cards
+    if view.sections:
+        check_cards = [c for s in view.sections for c in s.cards]
+    for c in check_cards:
+        if c.type == "clock":
+            size = str(c.get("clock_size", "") or "")
+            if size == "fit" or size.startswith("fit "):
+                return True
+            ld = c.get("lightdash", {}) or {}
+            if isinstance(ld, dict):
+                dfs = str(ld.get("date_fontsize", "") or "")
+                if dfs == "fit" or dfs.startswith("fit "):
+                    return True
+    return False
+
+
+# ---- Badge Renderers -----------------------------------------------------
+
+
+def _render_badges(view: View) -> str:
+    if not view.badges:
+        return ""
+    items = ""
+    for i, badge in enumerate(view.badges):
+        btype = badge.get("type", "entity")
+        if btype == "entity":
+            items += _render_entity_badge(badge)
+        elif btype == "shortcut":
+            items += _render_shortcut_badge(badge)
+        elif btype == "entity-filter":
+            items += _render_entity_filter_badge(badge, i, view.path)
+    if not items:
+        return ""
+    return '<div class="badges-bar">\n' + items + '</div>\n'
+
+
+def _render_entity_badge(badge: dict) -> str:
+    eid = badge.get("entity", "")
+    if not eid:
+        return ""
+    icon = _icon_html(_entity_icon(eid, badge.get("icon", "")), 16)
+    name = html.escape(badge.get("name", _friendly_name(eid)))
+    state_span = _entity_span(eid)
+    attrs: Dict[str, str] = {"class": "badge entity-badge"}
+    if _is_binary_domain(eid):
+        dom = eid.split(".")[0]
+        svc = _domain_toggle_service(dom)
+        attrs["hx-post"] = _url("/action")
+        attrs["hx-trigger"] = "click"
+        attrs["hx-vals"] = _js_obj(entity_id=eid, action="toggle", service=svc)
+        attrs["hx-swap"] = "none"
+    content = '<span class="badge-icon">' + icon + '</span><span class="badge-name">' + name + '</span>' + state_span
+    return _h("div", attrs, content, 2)
+
+
+def _render_shortcut_badge(badge: dict) -> str:
+    icon = _icon_html(badge.get("icon", ""), 16)
+    label = html.escape(badge.get("label", ""))
+    attrs: Dict[str, str] = {"class": "badge shortcut-badge"}
+    ta = badge.get("tap_action", {})
+    if isinstance(ta, dict):
+        a = Action(**{k: v for k, v in ta.items() if k in Action.__dataclass_fields__})
+        if a.action == "navigate":
+            path = _url("/d/" + html.escape(_dashboard_name) + "/view/" + html.escape(a.navigation_path))
+            attrs["hx-get"] = path
+            attrs["hx-target"] = "body"
+            attrs["hx-push-url"] = "true"
+            attrs["hx-trigger"] = "click"
+        elif a.action == "url":
+            attrs["onclick"] = "window.open('" + html.escape(a.url_path) + "','_blank')"
+    content = '<span class="badge-icon">' + icon + '</span><span class="badge-name">' + label + '</span>'
+    return _h("div", attrs, content, 2)
+
+
+def _render_entity_filter_badge(badge: dict, idx: int, view_path: str) -> str:
+    eid = badge.get("entity", "")
+    conditions = badge.get("conditions", [])
+    if not _filter_entity_matches(eid, conditions):
+        return ""
+    icon = _icon_html(_entity_icon(eid, badge.get("icon", "")), 16)
+    name = html.escape(badge.get("name", _friendly_name(eid)))
+    safe_dash = html.escape(_dashboard_name)
+    safe_path = html.escape(view_path)
+    attrs: Dict[str, str] = {
+        "class": "badge entity-filter-badge",
+        "id": f"badge-{idx}",
+        "hx-get": _url(f"/api/view/{safe_dash}/{safe_path}/badge/{idx}"),
+        "hx-trigger": f"sse:entity_{eid.replace('.', '_')}",
+        "hx-swap": "outerHTML",
+    }
+    content = '<span class="badge-icon">' + icon + '</span><span class="badge-name">' + name + '</span>'
+    return _h("div", attrs, content, 2)
+
+
+def _filter_entity_matches(entity_id: str, conditions: list) -> bool:
+    if not conditions:
+        return True
+    for cond in conditions:
+        if not isinstance(cond, dict):
+            continue
+        cond_entity = cond.get("entity", "")
+        cond_state = cond.get("state", "")
+        if not cond_entity:
+            continue
+        state = _entity_states.get(cond_entity, {})
+        actual = state.get("state", "")
+        if actual.lower() != cond_state.lower():
+            return False
+    return True
 
 
 def _render_card(card: Card, indent: int = 2) -> str:
@@ -1101,6 +1303,14 @@ def _render_entities(card: Card, indent: int = 2) -> str:
                 row_attrs["data-light-entity"] = eid
             elif eid.split(".")[0] == "cover":
                 row_attrs["data-cover-entity"] = eid
+        if isinstance(ent, dict):
+            ld = ent.get("lightdash", {}) or {}
+            if isinstance(ld, dict):
+                fav_vals = ld.get("favourite_values", []) or []
+                if isinstance(fav_vals, list):
+                    valid = [str(int(v)) for v in fav_vals[:4] if isinstance(v, (int, float)) and 0 <= v <= 100]
+                    if valid:
+                        row_attrs["data-fav-vals"] = ",".join(valid)
         if _is_binary_domain(eid) and eid.split(".")[0] != "cover":
             dom = eid.split(".")[0]
             svc = _domain_toggle_service(dom)
@@ -1219,6 +1429,13 @@ def _render_tile(card: Card, indent: int = 2) -> str:
             attrs["data-light-entity"] = eid
         elif eid.split(".")[0] == "cover":
             attrs["data-cover-entity"] = eid
+    ld = card.get("lightdash", {}) or {}
+    if isinstance(ld, dict):
+        fav_vals = ld.get("favourite_values", []) or []
+        if isinstance(fav_vals, list):
+            valid = [str(int(v)) for v in fav_vals[:4] if isinstance(v, (int, float)) and 0 <= v <= 100]
+            if valid:
+                attrs["data-fav-vals"] = ",".join(valid)
 
     is_binary = _is_binary_domain(eid)
     is_cover = eid.split(".")[0] == "cover" if "." in eid else False
@@ -1613,24 +1830,82 @@ def _render_clock(card: Card, indent: int = 2) -> str:
     tz = card.get("time_zone", "Europe/London")
     fmt = card.get("time_format", "24")
     sec = card.get("show_seconds", False)
-    size = card.get("clock_size", "medium")
+    size = str(card.get("clock_size", "medium") or "")
     no_bg = card.get("no_background", False)
 
-    size_class = f"clock-size-{size}"
+    named_sizes = {"small", "medium", "large"}
+    size_class = f"clock-size-{size}" if size in named_sizes else "clock-size-medium"
     attrs = {"class": f"ha-card clock-card {size_class}"}
     if no_bg:
         attrs["class"] += " clock-no-bg"
 
     clock_id = f"c{abs(hash(tz+fmt+str(sec)))%99999999}"
 
-    content = (
-        '\n'
-        + _SP * (indent + 1)
-        + f'<div class="clock-digital" id="{clock_id}"'
+    time_classes = "clock-digital"
+    time_style = ""
+    time_extra = ""
+    if size == "fit" or size.startswith("fit "):
+        time_classes += " icey_text_fit"
+        if size.startswith("fit ") and size.endswith("%"):
+            try:
+                pct = int(size[4:-1])
+                if 0 < pct < 1000:
+                    time_extra = f' data-fit-pct="{pct}"'
+            except ValueError:
+                pass
+    elif size.endswith("%"):
+        time_style = f' style="font-size: {html.escape(size)}"'
+
+    time_html = (
+        f'<div class="{time_classes}" id="{clock_id}"'
         + f' data-tz="{html.escape(tz)}"'
         + f' data-fmt="{html.escape(fmt)}"'
         + (' data-sec="1"' if sec else '')
-        + '>--:--</div>\n'
+        + time_style
+        + time_extra
+        + '>--:--</div>'
+    )
+
+    ld = card.get("lightdash", {}) or {}
+    if not isinstance(ld, dict):
+        ld = {}
+
+    date_html = ""
+    if ld.get("date_show", False):
+        date_format = ld.get("date_format", "default")
+        date_fontsize = str(ld.get("date_fontsize", "") or "")
+
+        date_classes = "clock-date"
+        date_style = ""
+        date_extra = ""
+        if date_fontsize == "fit" or date_fontsize.startswith("fit "):
+            date_classes += " icey_text_fit"
+            if date_fontsize.startswith("fit ") and date_fontsize.endswith("%"):
+                try:
+                    pct = int(date_fontsize[4:-1])
+                    if 0 < pct < 1000:
+                        date_extra = f' data-fit-pct="{pct}"'
+                except ValueError:
+                    pass
+        elif date_fontsize:
+            date_style = f' style="font-size: {html.escape(date_fontsize)}"'
+
+        date_id = f"d{abs(hash(tz+date_format))%99999999}"
+        date_html = (
+            '\n' + _SP * (indent + 1)
+            + f'<div class="{date_classes}" id="{date_id}"'
+            + f' data-dfmt="{html.escape(date_format)}"'
+            + date_style
+            + date_extra
+            + '>---</div>'
+        )
+
+    content = (
+        '\n'
+        + _SP * (indent + 1)
+        + time_html
+        + date_html
+        + '\n'
         + _SP * indent
     )
     return _h("div", attrs, content, indent)

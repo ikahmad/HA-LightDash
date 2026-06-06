@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.14.0 (2026-06-06)
+- **Added:** Badges bar on views — three badge types: `entity` (icon+name+live state, tap toggles binary entities), `shortcut` (icon+label, navigate to view or open URL), and `entity-filter` (conditionally shown based on entity state, with static render-time evaluation)
+- **Added:** Dynamic endpoint `GET /api/view/{dashboard}/{view_path}/badge/{idx}` for re-evaluating entity-filter badges on SSE trigger
+- **Added:** Badge CSS base styles in `style.css` and colour overrides in all 10 theme files via CSS variables (`--control-bg`, `--control-text`, `--text-faint`)
+- **Added:** 12 unit tests covering all badge types, edge cases (empty list, missing keys), and SSE trigger wiring
+- **Added:** README section with YAML examples for all three badge types
+- **Changed:** `_css_link()` now emits base `style.css` before theme CSS so theme overrides always apply
+- **Changed:** Example configs (`living_room.yaml`, `kitchen.yaml`) populated with real badge configurations
+
+## v0.13.4 (2026-06-06)
+- **Added:** Favourite brightness/position shortcuts — configure up to 4 preset values per light or cover under `lightdash.favourite_values` (e.g. `[25, 50, 75, 100]`). Appears as tap-able buttons in the long-press dimmer/cover modal
+- **Added:** 10 unit tests validating `favourite_values` parsing, max-4 truncation, bounds filtering, non-numeric rejection, and empty/missing key handling
+- **Added:** README documentation with config examples and ASCII diagram for favourite values
+- **Fixed:** JS syntax error in generated dimmer and cover modal code — closing brace/paren order was wrong, causing `Uncaught SyntaxError: Unexpected token ')'`
+
+## v0.13.3 (2026-06-06)
+- **Added:** Long-press modals (light dimmer and cover position) now respond to mouse events (`mousedown`/`mousemove`/`mouseup`) alongside the existing touch events — fully testable on desktop browsers
+
+## v0.13.2 (2026-06-06)
+- **Added:** `clock_size` and `date_fontsize` accept `"fit N%"` syntax — auto-size text to fill width then scale by percentage (e.g. `"fit 75%"`)
+- **Added:** `icey_textFit()` re-triggers on every clock tick (`uclk`), so text re-fits when content length changes
+
+## v0.13.1 (2026-06-06)
+- **Added:** Clock `clock_size` now accepts `"fit"` (auto-size to fill width) and percentage strings like `"150%"` (merge of former separate `fontsize` parameter)
+- **Added:** Clock date-line options (`date_show`, `date_format`, `date_fontsize`) are now nested under a `lightdash` sub-section to distinguish LightDash extensions from standard HA YAML
+- **Added:** Automatic `scripts.js` inclusion and `icey_textFit()` initialisation when `clock_size: fit` or `lightdash.date_fontsize: fit` is used
+
 ## v0.12.4 (2026-06-06)
 - **Fixed:** YAML editor inserted tab characters for indentation instead of spaces, causing parsing errors. Editor now uses 4-space indentation with `indentWithTabs: false`, and pasted content has tabs automatically converted to spaces.
 
