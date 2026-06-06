@@ -1,3 +1,11 @@
+# Release Notes for v0.13.3 (2026-06-06)
+
+Light and cover long-press modals now work with mouse clicks, making them testable on desktop browsers without touch emulation.
+
+- **Mouse support for long-press modals:** The light dimmer and cover position modals now respond to `mousedown`/`mousemove`/`mouseup` events alongside the existing touch events. Hold-click on any light tile or cover tile to open the modal, then drag the slider with your mouse. This makes testing possible with browser automation tools like Playwright without enabling touch emulation.
+
+---
+
 # Release Notes for v0.13.2 (2026-06-06)
 
 Clock auto-sizing gets more precise with percentage control and keeps text fitted as time ticks.

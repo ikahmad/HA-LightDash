@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.13.3 (2026-06-06)
+- **Added:** Long-press modals (light dimmer and cover position) now respond to mouse events (`mousedown`/`mousemove`/`mouseup`) alongside the existing touch events — fully testable on desktop browsers
+
 ## v0.13.2 (2026-06-06)
 - **Added:** `clock_size` and `date_fontsize` accept `"fit N%"` syntax — auto-size text to fill width then scale by percentage (e.g. `"fit 75%"`)
 - **Added:** `icey_textFit()` re-triggers on every clock tick (`uclk`), so text re-fits when content length changes
