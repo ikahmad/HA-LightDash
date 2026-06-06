@@ -541,38 +541,14 @@ A vertical brightness slider with tap-to-toggle on the light icon. Drag up/down
 to set brightness — value is sent on release. Tap the icon to toggle on/off
 (turning on restores the last brightness).
 
-```
-┌─────────────────────┐
-│  Living Room     ✕  │
-│ ┌────┐              │
-│ │    │   ┌────┐     │
-│ │ ▓▓ │   │ 💡 │     │
-│ │ ▓▓ │   │ 72%│     │
-│ │ ▓▓ │   └────┘     │
-│ │ ▓▓ │              │
-│ └────┘              │
-└─────────────────────┘
-```
-
 ![Dimmer modal](example-images/example-modal.png)
 
 ### Cover Position
 
-A vertical position slider with open/stop/close buttons alongside. Drag to set
+A vertical position slider with open/stop/close buttons alongside, just like the dimmer above. Drag to set
 a precise position, or tap the up/stop/down buttons for full open, halt, or
 full close.
 
-```
-┌─────────────────────┐
-│  Kitchen Roof    ✕  │
-│ ┌────┐    ┌───┐     │
-│ │    │    │ ▲ │     │
-│ │ ▓▓ │    │ 50│     │
-│ │ ▓▓ │    │ ⏹ │     │
-│ │ ▓▓ │    │ ▼ │     │
-│ └────┘    └───┘     │
-└─────────────────────┘
-```
 
 ### Favourite Values
 
@@ -593,18 +569,6 @@ first 4 are used.
 
 The buttons appear vertically on the left side of the modal, distributed
 evenly top-to-bottom (highest to lowest):
-
-```
-┌─────────────────────┐
-│  Living Room     ✕  │
-│ ┌────┐ ┌────┐       │
-│ │100%│ │    │ ┌────┐│
-│ │ 75%│ │ ▓▓ │ │ 💡 ││
-│ │ 50%│ │ ▓▓ │ │100%││
-│ │ 25%│ └────┘ └────┘│
-│ └────┘              │
-└─────────────────────┘
-```
 
 ![Favourite values](example-images/example-popup-favourites.png)
 
@@ -698,14 +662,14 @@ Architecture
 ┌──────────────────────────────────────────────────────────────────┐
 │                        LightDash (FastAPI)                       │
 │                                                                  │
-│  ┌──────────┐   ┌──────────┐   ┌──────────────┐                 │
-│  │  parser   │◄──│  config  │◄──│  *yaml files  │  or inline     │
-│  │  .py      │   │  .py     │   │  config/      │  add-on config │
-│  └────┬─────┘   └──────────┘   └──────────────┘                 │
+│  ┌──────────┐   ┌──────────┐   ┌──────────────┐                  │
+│  │  parser  │◄──│  config  │◄──│  *yaml files  │  or inline      │
+│  │  .py     │   │  .py     │   │  config/      │  add-on config  │
+│  └────┬─────┘   └──────────┘   └──────────────┘                  │
 │       │ Dashboard / View / Card models                           │
 │       ▼                                                          │
 │  ┌──────────┐                                                    │
-│  │ renderer │────► HTML + CSS + JS  (htmx + SSE)                │
+│  │ renderer │────► HTML + CSS + JS  (htmx + SSE)                 │
 │  │  .py     │                                                    │
 │  └──────────┘                                                    │
 │       │                                                          │
@@ -715,8 +679,8 @@ Architecture
 │  └──────────┘   └──────┬───────┘                                 │
 │                        │                                         │
 │  ┌──────────┐          │                                         │
-│  │   sse    │◄─────────┘  WebSocket /api/websocket              │
-│  │ manager  │──► SSE /_sse  (entity state events)               │
+│  │   sse    │◄─────────┘  WebSocket /api/websocket               │
+│  │ manager  │──► SSE /_sse  (entity state events)                │
 │  └──────────┘                                                    │
 └──────────────────────────────────────────────────────────────────┘
         │

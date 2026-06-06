@@ -3,6 +3,7 @@ lightdash:
   container_width: 480px
   container_height: 480px
   auto_close_modal_seconds: 10
+  theme: glass
 views:
   - type: sections
     max_columns: 1
@@ -17,6 +18,9 @@ views:
       - type: entity
         entity: light.kitchen_counters
         name: Counters
+      - type: entity
+        entity: sensor.myenergi_my_home_home_consumption_2
+        name: Power
       - type: entity-filter
         entity: cover.kitchen_roof
         name: Roof open
@@ -81,14 +85,3 @@ views:
             grid_options:
               columns: 6
               rows: auto
-          - type: button
-            icon: mdi:air-filter
-            name: ""
-            tap_action:
-              action: call-service
-              service: cover.set_cover_position
-              target:
-                entity_id:
-                  - cover.kitchen_roof
-              data:
-                position: 7

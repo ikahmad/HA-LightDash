@@ -7,25 +7,6 @@ views:
   - type: sections
     max_columns: 1
     title: Home
-    badges:
-      - type: entity
-        entity: light.porch
-        name: Porch
-      - type: entity
-        entity: light.entryway
-        name: Entryway
-      - type: shortcut
-        icon: mdi:arrow-right-bold
-        label: Other Rooms
-        tap_action:
-          action: navigate
-          navigation_path: other-rooms
-      - type: entity-filter
-        entity: input_number.home_comfort_temperature
-        name: Comfort
-        conditions:
-          - entity: input_number.home_comfort_temperature
-            state: "21"
     sections:
       - type: grid
         cards:
@@ -46,7 +27,7 @@ views:
             vertical: true
             features_position: bottom
           - clock_style: digital
-            clock_size: fit 80%
+            clock_size: fit 70%
             time_zone: Europe/London
             time_format: '24'
             show_seconds: false
@@ -55,7 +36,7 @@ views:
             lightdash:
               date_show: true
               date_format: iso
-              date_fontsize: fit 80%
+              date_fontsize: fit 70%
             grid_options:
               columns: 6
               rows: 1
