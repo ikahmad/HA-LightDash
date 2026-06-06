@@ -315,7 +315,7 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             + auto_close_timer +
             'm.style.display="";\n'
             'var leftEl=document.getElementById("dimmer-left");\n'
-            'if(leftEl){leftEl.innerHTML="";if(favVals){favVals.split(",").forEach(function(v){var btn=document.createElement("button");btn.textContent=v+"%";btn.className="dimmer-fav-btn";btn.addEventListener("click",function(){setBri(parseInt(v));sendBri();' + auto_close_reset + '});leftEl.appendChild(btn)})})}\n'
+            'if(leftEl){leftEl.innerHTML="";if(favVals){favVals.split(",").forEach(function(v){var btn=document.createElement("button");btn.textContent=v+"%";btn.className="dimmer-fav-btn";btn.addEventListener("click",function(){setBri(parseInt(v));sendBri();' + auto_close_reset + '});leftEl.appendChild(btn)})}}\n'
             '}\n'
 
             'function hideDimmer(){m.style.display="none";_curEid=""}\n'
@@ -498,7 +498,7 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             + auto_close_timer +
             'm.style.display="";\n'
             'var leftEl=document.getElementById("cover-left");\n'
-            'if(leftEl){leftEl.innerHTML="";if(favVals){favVals.split(",").forEach(function(v){var btn=document.createElement("button");btn.textContent=v+"%";btn.className="cover-fav-btn";btn.addEventListener("click",function(){setPos(parseInt(v));sendPos();' + auto_close_reset + '});leftEl.appendChild(btn)})})}\n'
+            'if(leftEl){leftEl.innerHTML="";if(favVals){favVals.split(",").forEach(function(v){var btn=document.createElement("button");btn.textContent=v+"%";btn.className="cover-fav-btn";btn.addEventListener("click",function(){setPos(parseInt(v));sendPos();' + auto_close_reset + '});leftEl.appendChild(btn)})}}\n'
             '}\n'
 
             'function hideCover(){m.style.display="none";_curEid=""}\n'

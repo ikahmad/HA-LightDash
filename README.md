@@ -249,6 +249,17 @@ Cover entities support a **long-press position modal** — a vertical position
 slider with open/stop/close buttons (see
 [Long-Press Modals](#long-press-modals) below).
 
+Both light and cover tiles accept a `lightdash.favourite_values` list to add
+shortcut buttons to their long-press modal (see
+[Favourite Values](#favourite-values) below).
+
+```yaml
+type: tile
+entity: light.living_room
+lightdash:
+  favourite_values: [25, 50, 75, 100]
+```
+
 ### entities
 
 A grouped list of entity rows, each with icon, name, state, and controls.
@@ -270,6 +281,17 @@ entities:
 
 Cover entities automatically get open/stop/close buttons.
 Binary non-cover entities get a toggle switch.
+
+Light and cover entity rows also accept `lightdash.favourite_values` for
+shortcut buttons in the long-press modal:
+
+```yaml
+type: entities
+entities:
+  - entity: light.kitchen
+    lightdash:
+      favourite_values: [25, 50, 75, 100]
+```
 
 ### button
 
@@ -541,6 +563,41 @@ full close.
 │ └────┘    └───┘     │
 └─────────────────────┘
 ```
+
+### Favourite Values
+
+Configure up to 4 preset brightness or position values to appear as
+tap-able buttons in the long-press modal. Set them under
+`lightdash.favourite_values` on any tile or entity row:
+
+```yaml
+type: tile
+entity: light.living_room
+lightdash:
+  favourite_values: [25, 50, 75, 100]
+```
+
+Each value must be an integer or float between 0 and 100. Values outside that
+range are silently ignored. If more than 4 values are provided, only the
+first 4 are used.
+
+The buttons appear vertically on the left side of the modal, distributed
+evenly top-to-bottom (highest to lowest):
+
+```
+┌─────────────────────┐
+│  Living Room     ✕  │
+│ ┌────┐ ┌────┐       │
+│ │100%│ │    │ ┌────┐│
+│ │ 75%│ │ ▓▓ │ │ 💡 ││
+│ │ 50%│ │ ▓▓ │ │100%││
+│ │ 25%│ └────┘ └────┘│
+│ └────┘              │
+└─────────────────────┘
+```
+
+Tap a favourite button to set the brightness or position immediately.
+The slider updates to match.
 
 ### Auto-Close
 

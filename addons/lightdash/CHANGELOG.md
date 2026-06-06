@@ -3,6 +3,8 @@
 ## v0.13.4 (2026-06-06)
 - **Added:** Favourite brightness/position shortcuts — configure up to 4 preset values per light or cover under `lightdash.favourite_values` (e.g. `[25, 50, 75, 100]`). Appears as tap-able buttons in the long-press dimmer/cover modal
 - **Added:** 10 unit tests validating `favourite_values` parsing, max-4 truncation, bounds filtering, non-numeric rejection, and empty/missing key handling
+- **Added:** README documentation with config examples and ASCII diagram for favourite values
+- **Fixed:** JS syntax error in generated dimmer and cover modal code — closing brace/paren order was wrong, causing `Uncaught SyntaxError: Unexpected token ')'`
 
 ## v0.13.3 (2026-06-06)
 - **Added:** Long-press modals (light dimmer and cover position) now respond to mouse events (`mousedown`/`mousemove`/`mouseup`) alongside the existing touch events — fully testable on desktop browsers

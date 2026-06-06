@@ -3,6 +3,7 @@
 Favourite brightness shortcuts let you tap preset values in the dimmer and cover modals, so you don't always have to drag the slider.
 
 - **Favourite values for light and cover:** You can now set `favourite_values` under `lightdash:` on any light tile, cover tile, or entity row — for example `[25, 50, 75, 100]`. Up to 4 values, each between 0 and 100. When you long-press to open the dimmer or cover modal, your presets appear as tap-able buttons on the left side. Tap one and the brightness or position is set immediately.
+- **Browser JS syntax error fixed:** The generated JavaScript had a brace/paren ordering issue in the favourite-buttons code, causing `Uncaught SyntaxError: Unexpected token ')'` in the browser console and preventing the modals from working. Closing brackets are now in the correct order.
 
 ---
 
