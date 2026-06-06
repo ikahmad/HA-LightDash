@@ -1776,7 +1776,7 @@ def _render_weather_forecast(card: Card, indent: int = 2) -> str:
                     day = dt_str
 
                 if fc_templow is not None and forecast_type in ("daily", "twice_daily"):
-                    temp_str = f"{_fmt_temp(fc_templow, should_round=True, unit="")}-{_fmt_temp(fc_temp, should_round=True, unit=temp_unit)}"
+                    temp_str = f"{_fmt_temp(fc_templow, should_round=True, unit='')}-{_fmt_temp(fc_temp, should_round=True, unit=temp_unit)}"
                 else:
                     temp_str = _fmt_temp(fc_temp, should_round=True)
 

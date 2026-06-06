@@ -9,7 +9,7 @@ LightDash is designed to handle copy-and-pasted YAML from existing dashboards wi
 
 **Caveat 1:** I've focused on the cards I use in my own small-screen dashboards. I'd love for contributors to add support for their own layouts!
 
-**Caveat 2:** Yep, I used OpenCode to build a lot of this. I'm a 25+ year software architect and developer, but this is a one-day project. I'm pretty happy it's not filled with slop - I've reviewed it and it's passable - but I make no warranties about code quality this early in its life.
+**Caveat 2:** Yep, I used OpenCode to build a lot of this. I'm a 25+ year software architect and developer, but this started as a one-day project. I'm pretty happy it's not filled with slop - I've reviewed it and it's passable - but I make no warranties about code quality this early in its life.
 
 Installation
 ------------
