@@ -126,12 +126,14 @@ views:
 
 ### lightdash config
 
-You can optionally fix the container size - useful for small-screen devices, and previewing rendering.
+You can optionally fix the container size - useful for small-screen devices, and previewing rendering. You can also set auto-timeout behaviours.
 
 ```yaml
 lightdash:
-  container_width: 480px    # fixed container width (e.g. 480px, 100%)
-  container_height: 480px   # fixed container height
+  container_width: 480px           # fixed container width (e.g. 480px, 100%)
+  container_height: 480px          # fixed container height
+  auto_revert_seconds: 120         # auto-return to first view after inactivity (0=disabled)
+  auto_close_modal_seconds: 15     # auto-close popup modals after inactivity (0=disabled)
 ```
 
 ### View fields
@@ -377,6 +379,33 @@ type: iframe
 url: https://example.com
 aspect_ratio: "50%"
 ```
+
+### weather-forecast
+
+Displays current weather conditions from a `weather` domain entity and
+forecast data from that entity's `forecast` attribute, or from a separate
+``forecast_entity`` sensor (for integrations like Pirate Weather that
+don't expose forecast in the entity state).
+
+```yaml
+type: weather-forecast
+entity: weather.openweathermap      # current conditions source
+forecast_entity: sensor.london_forecast_hourly  # optional, forecast data source
+name: My Location                   # optional
+show_current: true                  # optional, default true
+show_forecast: true                 # optional, default true
+forecast_type: hourly               # daily / hourly / twice_daily
+secondary_info_attribute: extrema   # optional: extrema / precipitation / humidity
+round_temperature: false            # optional, round temps to nearest integer
+forecast_count: 12                  # optional, number of forecast items to show
+```
+
+| Config | Description |
+|--------|-------------|
+| `forecast_entity` | Sensor entity to read forecast data from (e.g. a template sensor). If omitted, forecast is read from the main `entity`'s `attributes.forecast`. |
+| `forecast_type` | `daily` — shows day name, icon, high/low. `hourly` — shows time, icon, temp. `twice_daily` — same layout as daily. |
+| `secondary_info_attribute` | What to show under the current temperature. Defaults to `extrema` (high/low from today's forecast), then `precipitation`, then `humidity`. |
+| `forecast_count` | How many forecast items to display. Defaults to 5 (daily/twice_daily) or 12 (hourly). |
 
 ### placeholder
 

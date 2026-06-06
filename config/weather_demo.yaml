@@ -1,0 +1,71 @@
+title: Weather Demo
+lightdash:
+  container_width: 480px
+  container_height: 800px
+  theme: glass
+views:
+  - title: Daily
+    path: daily
+    icon: mdi:weather-sunny
+    sections:
+      - type: grid
+        columns: 1
+        cards:
+          - type: weather-forecast
+            entity: weather.london
+            forecast_entity: sensor.london_forecast_daily
+            forecast_type: daily
+            forecast_count: 5
+            secondary_info_attribute: extrema
+            round_temperature: true
+          - type: weather-forecast
+            entity: weather.london
+            forecast_entity: sensor.london_forecast_daily
+            forecast_type: daily
+            forecast_count: 3
+            secondary_info_attribute: precipitation
+            round_temperature: true
+          - type: weather-forecast
+            entity: weather.london
+            forecast_entity: sensor.london_forecast_daily
+            forecast_type: daily
+            forecast_count: 3
+            secondary_info_attribute: humidity
+            round_temperature: false
+  - title: Hourly
+    path: hourly
+    icon: mdi:weather-clock
+    sections:
+      - type: grid
+        columns: 1
+        cards:
+          - type: weather-forecast
+            entity: weather.london
+            forecast_entity: sensor.london_forecast_hourly
+            forecast_type: hourly
+            forecast_count: 8
+            secondary_info_attribute: humidity
+            round_temperature: true
+  - title: Card Sizes
+    path: sizes
+    icon: mdi:view-grid
+    sections:
+      - type: grid
+        columns: 2
+        cards:
+          - type: weather-forecast
+            entity: weather.london
+            forecast_entity: sensor.london_forecast_hourly
+            forecast_type: hourly
+            forecast_count: 3
+            round_temperature: true
+            grid_options:
+              columns: 1
+          - type: weather-forecast
+            entity: weather.london
+            forecast_entity: sensor.london_forecast_hourly
+            forecast_type: hourly
+            forecast_count: 3
+            round_temperature: true
+            grid_options:
+              columns: 1

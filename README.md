@@ -9,7 +9,7 @@ LightDash is designed to handle copy-and-pasted YAML from existing dashboards wi
 
 **Caveat 1:** I've focused on the cards I use in my own small-screen dashboards. I'd love for contributors to add support for their own layouts!
 
-**Caveat 2:** Yep, I used OpenCode to build a lot of this. I'm a 25+ year software architect and developer, but this is a one-day project. I'm pretty happy it's not filled with slop - I've reviewed it and it's passable - but I make no warranties about code quality this early in its life.
+**Caveat 2:** Yep, I used OpenCode to build a lot of this. I'm a 25+ year software architect and developer, but this started as a one-day project. I'm pretty happy it's not filled with slop - I've reviewed it and it's passable - but I make no warranties about code quality this early in its life.
 
 Installation
 ------------
@@ -161,12 +161,18 @@ views:
 
 ### lightdash config
 
-You can optionally fix the container size - useful for small-screen devices, and previewing rendering.
+Container sizing, visual theme, and auto-timeout behaviours.
 
 ```yaml
 lightdash:
-  container_width: 480px    # fixed container width (e.g. 480px, 100%)
-  container_height: 480px   # fixed container height
+  container_width: 480px           # fixed container width (e.g. 480px, 100%)
+  container_height: 480px          # fixed container height
+  theme: ha-dark                   # visual theme: ha-dark, daylight, glass, hearth,
+                                   #   ink, sage, soft, bauhaus, terminal
+  auto_revert_seconds: 120         # auto-return to first view after inactivity
+                                   #   (0=disabled, wall-mounted tablet friendly)
+  auto_close_modal_seconds: 15     # auto-close popup modals after inactivity
+                                   #   (0=disabled)
 ```
 
 ### View fields
@@ -235,6 +241,14 @@ Binary-domain entities (`light`, `switch`, `fan`, `input_boolean`) get a
 toggle switch. Non-binary entities show state text. Cover entities show
 open/stop/close buttons instead of a toggle.
 
+Light entities support a **long-press dimmer modal** — a vertical brightness
+slider with tap-to-toggle, auto-closes after inactivity (see
+[Long-Press Modals](#long-press-modals) below).
+
+Cover entities support a **long-press position modal** — a vertical position
+slider with open/stop/close buttons (see
+[Long-Press Modals](#long-press-modals) below).
+
 ### entities
 
 A grouped list of entity rows, each with icon, name, state, and controls.
@@ -259,7 +273,8 @@ Binary non-cover entities get a toggle switch.
 
 ### button
 
-A compact action button. Icon and name are on one line. Supports `tap_action`.
+A compact action button. Icon and name are on one line. Does **not** require an
+`entity` — ideal for triggering HA services directly.
 
 ```yaml
 type: button
@@ -268,6 +283,22 @@ icon: mdi:arrow-right-bold
 tap_action:
   action: navigate
   navigation_path: other-rooms
+```
+
+Call any HA service with `target` and `data`:
+
+```yaml
+type: button
+icon: mdi:air-filter
+name: ""
+tap_action:
+  action: call-service
+  service: cover.set_cover_position
+  target:
+    entity_id:
+      - cover.velux_window_roof_window
+  data:
+    position: 7
 ```
 
 ### glance
@@ -413,10 +444,90 @@ url: https://example.com
 aspect_ratio: "50%"
 ```
 
+### weather-forecast
+
+Displays current weather conditions and forecast from a `weather` entity. The
+forecast is read from the entity's `attributes.forecast`, or from a separate
+`forecast_entity` sensor (required for integrations like Pirate Weather that
+don't expose forecast in entity state attributes).
+
+```yaml
+type: weather-forecast
+entity: weather.openweathermap
+forecast_entity: sensor.london_forecast_hourly    # optional forecast source
+name: London                                       # optional
+show_current: true                                 # optional, default true
+show_forecast: true                                # optional, default true
+forecast_type: hourly                              # daily / hourly / twice_daily
+secondary_info_attribute: extrema                  # extrema / precipitation / humidity
+round_temperature: false                           # round to whole degrees
+forecast_count: 12                                 # items to show (default 5/12)
+```
+
+| Config | Description |
+|--------|-------------|
+| `forecast_entity` | Sensor entity to read forecast data from (e.g. a template sensor). If omitted, forecast is read from the main `entity`'s `attributes.forecast`. |
+| `forecast_type` | `daily` — day name, icon, high/low. `hourly` — time, icon, temp. `twice_daily` — same layout as daily. |
+| `secondary_info_attribute` | What to show under the current temperature. Defaults to `extrema` (high/low from today's forecast), then `precipitation`, then `humidity`. |
+| `forecast_count` | How many forecast items to display. Defaults to 5 (daily/twice_daily) or 12 (hourly). |
+
+Current conditions show the condition icon, condition name, temperature, and
+secondary info. Forecast items are laid out horizontally (fill width for ≤5
+items, scroll for more).
+
 ### placeholder
 
 Rendered when a card type is unknown. Displays a `?` placeholder.
 
+
+Long-Press Modals
+-----------------
+
+Light and cover entities support long-press modals for fine-grained control.
+Long-press any tile or entity row to open the modal.
+
+### Light Dimmer
+
+A vertical brightness slider with tap-to-toggle on the light icon. Drag up/down
+to set brightness — value is sent on release. Tap the icon to toggle on/off
+(turning on restores the last brightness).
+
+```
+┌─────────────────────┐
+│  Living Room     ✕  │
+│ ┌────┐              │
+│ │    │   ┌────┐     │
+│ │ ▓▓ │   │ 💡 │     │
+│ │ ▓▓ │   │ 72%│     │
+│ │ ▓▓ │   └────┘     │
+│ │ ▓▓ │              │
+│ └────┘              │
+└─────────────────────┘
+```
+
+### Cover Position
+
+A vertical position slider with open/stop/close buttons alongside. Drag to set
+a precise position, or tap the up/stop/down buttons for full open, halt, or
+full close.
+
+```
+┌─────────────────────┐
+│  Kitchen Roof    ✕  │
+│ ┌────┐    ┌───┐     │
+│ │    │    │ ▲ │     │
+│ │ ▓▓ │    │ 50│     │
+│ │ ▓▓ │    │ ⏹ │     │
+│ │ ▓▓ │    │ ▼ │     │
+│ └────┘    └───┘     │
+└─────────────────────┘
+```
+
+### Auto-Close
+
+If `auto_close_modal_seconds` is set in the dashboard's `lightdash:` config,
+the modal auto-dismisses after that many seconds of inactivity. Any
+interaction (slider drag, button tap, backdrop tap) resets the timer.
 
 Tap Actions
 -----------
@@ -528,7 +639,9 @@ Architecture
    `custom:layout-card`) are mapped to native LightDash equivalents.
 
 2. **Navigation** — `GET /d/{name}` redirects (302) to the first view.
-   `GET /d/{name}/view/{path}` renders a full HTML page.
+   `GET /d/{name}/view/{path}` renders a full HTML page. If
+   `auto_revert_seconds` is configured, a JS inactivity timer automatically
+   navigates back to the first view on timeout.
 
 3. **Rendering** — The renderer walks view cards/sections, generates HTML with
    htmx attributes for live interactions, SSE event attributes for live state
@@ -542,7 +655,12 @@ Architecture
 5. **Actions** — Toggle switches, sliders, and tap actions POST to `/action`,
    which forwards service calls to the HA REST API.
 
-6. **Toggle sync** — A JS function (`st()`) runs after every htmx swap and
+6. **Long-press modals** — Light and cover entities open a dimmer or position
+   modal on 500ms long-press. The modal reads entity state via `/api/state/{eid}`
+   and sends actions via `navigator.sendBeacon()`. If `auto_close_modal_seconds`
+   is configured, an inactivity timer auto-dismisses the modal.
+
+7. **Toggle sync** — A JS function (`st()`) runs after every htmx swap and
    SSE message, synchronising toggle switch positions and dimming classes with
    the rendered entity state text.
 

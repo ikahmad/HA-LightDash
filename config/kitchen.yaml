@@ -2,6 +2,7 @@ title: Kitchen
 lightdash:
   container_width: 480px
   container_height: 480px
+  auto_close_modal_seconds: 10
 views:
   - type: sections
     max_columns: 1
@@ -66,3 +67,14 @@ views:
             grid_options:
               columns: 6
               rows: auto
+          - type: button
+            icon: mdi:air-filter
+            name: ""
+            tap_action:
+              action: call-service
+              service: cover.set_cover_position
+              target:
+                entity_id:
+                  - cover.kitchen_roof
+              data:
+                position: 7

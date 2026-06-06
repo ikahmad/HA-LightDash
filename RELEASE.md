@@ -1,20 +1,13 @@
-# Release Notes for v0.10.17 (2026-06-04)
+# Release Notes for v0.12.4 (2026-06-06)
 
-This release adds the ability to hide entity icons in entities cards for a cleaner, more compact look.
+Lots of new features have landed! Here's what's new:
 
-- **Hide entity icons:** Set `icon: none` on any entity item in an entities card and the icon disappears. The entity name and state naturally shift to the left edge for a compact, text-only row.
-
-# Release Notes for v0.10.15 (2026-06-03)
-
-This release adds better diagnostics for tracking down why the addon occasionally stops with no error logged.
-
-- Added global exception handlers that catch crashes which previously went completely silent — if Python hits an unhandled exception anywhere, it will now be logged at CRITICAL level with full details.
-- Added signal handlers for SIGTERM and SIGINT so the logs will show when the addon receives a shutdown signal from Home Assistant.
-- The heartbeat now fires after 60 seconds (instead of 5 minutes) to capture an early memory and client-count snapshot before the potential death window.
-
-# Release Notes for v0.10.16 (2026-06-04)
-
-This release adds a long-press dimmer modal for light entities and a CSS theme system so you can style your dashboard to match your mood.
-
-- **Light dimmer:** Long-press any light tile or entity row to open a brightness slider. Drag your finger up and down to adjust brightness — the value is sent to Home Assistant when you let go. Tap the light icon to toggle on/off (turning on restores the last brightness).
-- **Dashboard themes:** You can now pick a visual style for each dashboard. Add `theme: name` under the `lightdash:` key in your dashboard YAML, where `name` is one of: `ha-dark` (default), `daylight`, `glass`, `hearth`, `ink`, `sage`, `soft`, `bauhaus`, or `terminal`. Each theme is a complete redesign — colours, fonts, spacing, and control styles all change together.
+- **Weather forecast card:** Add a `type: weather-forecast` card to any dashboard and see current conditions plus upcoming weather. Choose daily (shows weekday, icon, and high/low range), hourly (shows time, icon, and temperature), or twice-daily. You can pick what shows under the current temperature — high/low, precipitation, or humidity — and limit how many forecast items appear.
+- **Forecast from a separate sensor:** Some weather integrations (like Pirate Weather) don't put forecast data in the entity itself. You can point `forecast_entity` at a template sensor that does have forecast data, while the main `entity` still drives current conditions.
+- **Light dimmer on long-press:** Hold your finger on any light tile or light entity row and a brightness slider pops up. Drag up or down to set brightness — your finger lifts and it's sent to Home Assistant. Tap the light icon to switch on or off (turning back on remembers your last brightness).
+- **Cover position on long-press:** Hold your finger on any cover tile or cover entity row and a position slider appears, alongside dedicated open, stop, and close buttons. Drag to any position, or tap the arrow buttons for full open or close.
+- **Auto-revert to home screen:** Set `auto_revert_seconds` under the `lightdash:` section and your dashboard will automatically return to the first view after a period of inactivity — perfect for wall-mounted tablets that should always show the main screen.
+- **Auto-close popups:** Set `auto_close_modal_seconds` and the dimmer and cover modals will dismiss themselves after a few seconds of inactivity, keeping your display clean.
+- **Pick a theme:** Add `theme: name` under `lightdash:` to choose from 10 visual styles — `ha-dark`, `daylight`, `glass`, `hearth`, `ink`, `sage`, `soft`, `bauhaus`, `terminal`, or the base `style`. Everything changes together: colours, fonts, spacing, and control styles.
+- **Hide entity icons:** Set `icon: none` on any entity row in an entities card and the icon disappears — the name and state shift left for a clean, compact, text-only look.
+- **Accessibility improvements:** Weather condition names and cover control buttons now have proper `aria-label` attributes for screen readers.
