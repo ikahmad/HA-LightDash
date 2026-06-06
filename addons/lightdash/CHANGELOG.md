@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.12.3 (2026-06-06)
+## v0.12.4 (2026-06-06)
 - **Fixed:** YAML editor inserted tab characters for indentation instead of spaces, causing parsing errors. Editor now uses 4-space indentation with `indentWithTabs: false`, and pasted content has tabs automatically converted to spaces.
 
 ## v0.12.2 (2026-06-06)

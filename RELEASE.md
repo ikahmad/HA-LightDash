@@ -1,4 +1,4 @@
-# Release Notes for v0.12.3 (2026-06-06)
+# Release Notes for v0.12.4 (2026-06-06)
 
 Lots of new features have landed! Here's what's new:
 

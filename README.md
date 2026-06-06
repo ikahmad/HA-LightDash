@@ -273,7 +273,8 @@ Binary non-cover entities get a toggle switch.
 
 ### button
 
-A compact action button. Icon and name are on one line. Supports `tap_action`.
+A compact action button. Icon and name are on one line. Does **not** require an
+`entity` — ideal for triggering HA services directly.
 
 ```yaml
 type: button
@@ -282,6 +283,22 @@ icon: mdi:arrow-right-bold
 tap_action:
   action: navigate
   navigation_path: other-rooms
+```
+
+Call any HA service with `target` and `data`:
+
+```yaml
+type: button
+icon: mdi:air-filter
+name: ""
+tap_action:
+  action: call-service
+  service: cover.set_cover_position
+  target:
+    entity_id:
+      - cover.velux_window_roof_window
+  data:
+    position: 7
 ```
 
 ### glance
