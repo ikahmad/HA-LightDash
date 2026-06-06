@@ -484,6 +484,18 @@ def test_clock_size_fit():
     assert "icey_textFit()" in html
 
 
+def test_clock_fit_retriggers_on_uclk():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "clock_size": "fit"}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert 'typeof icey_textFit==="function")icey_textFit()' in html
+
+
 def test_clock_date_default():
     from app.parser import parse_dashboard
     from app.renderer import render_view
@@ -548,6 +560,34 @@ def test_clock_date_fontsize_fit_triggers_scripts():
     assert "icey_text_fit" in html
     assert "/static/scripts.js" in html
     assert "icey_textFit()" in html
+
+
+def test_clock_size_fit_pct():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "clock_size": "fit 75%"}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert "icey_text_fit" in html
+    assert 'data-fit-pct="75"' in html
+    assert "/static/scripts.js" in html
+
+
+def test_clock_date_fontsize_fit_pct():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "lightdash": {"date_show": True, "date_fontsize": "fit 50%"}}]}]
+    }
+    dashboard = parse_dashboard(raw)
+    html = render_view(dashboard.views[0], dashboard)
+    assert "icey_text_fit" in html
+    assert 'data-fit-pct="50"' in html
+    assert "/static/scripts.js" in html
 
 
 def test_entity_toggle_in_entities_card():

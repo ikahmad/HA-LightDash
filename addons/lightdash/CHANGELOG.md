@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.13.2 (2026-06-06)
+- **Added:** `clock_size` and `date_fontsize` accept `"fit N%"` syntax — auto-size text to fill width then scale by percentage (e.g. `"fit 75%"`)
+- **Added:** `icey_textFit()` re-triggers on every clock tick (`uclk`), so text re-fits when content length changes
+
 ## v0.13.1 (2026-06-06)
 - **Added:** Clock `clock_size` now accepts `"fit"` (auto-size to fill width) and percentage strings like `"150%"` (merge of former separate `fontsize` parameter)
 - **Added:** Clock date-line options (`date_show`, `date_format`, `date_fontsize`) are now nested under a `lightdash` sub-section to distinguish LightDash extensions from standard HA YAML

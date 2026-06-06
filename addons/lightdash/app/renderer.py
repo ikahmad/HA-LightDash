@@ -229,7 +229,7 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             'function(e){var df=e.getAttribute("data-dfmt")||"default";'
             'if(df==="iso")e.textContent=n.toISOString().split("T")[0];'
             'else if(df==="locale")e.textContent=n.toLocaleDateString();'
-            'else e.textContent=n.toDateString()})}\n'
+            'else e.textContent=n.toDateString()});if(typeof icey_textFit==="function")icey_textFit()}\n'
              'setInterval(uclk,30000);\n'
              'document.addEventListener("DOMContentLoaded",uclk);\n'
              'document.addEventListener("htmx:afterSwap",uclk);\n'
@@ -773,11 +773,14 @@ def _view_needs_fit_text(view: View) -> bool:
         check_cards = [c for s in view.sections for c in s.cards]
     for c in check_cards:
         if c.type == "clock":
-            if c.get("clock_size", "") == "fit":
+            size = str(c.get("clock_size", "") or "")
+            if size == "fit" or size.startswith("fit "):
                 return True
             ld = c.get("lightdash", {}) or {}
-            if isinstance(ld, dict) and ld.get("date_fontsize", "") == "fit":
-                return True
+            if isinstance(ld, dict):
+                dfs = str(ld.get("date_fontsize", "") or "")
+                if dfs == "fit" or dfs.startswith("fit "):
+                    return True
     return False
 
 
@@ -1654,8 +1657,16 @@ def _render_clock(card: Card, indent: int = 2) -> str:
 
     time_classes = "clock-digital"
     time_style = ""
-    if size == "fit":
+    time_extra = ""
+    if size == "fit" or size.startswith("fit "):
         time_classes += " icey_text_fit"
+        if size.startswith("fit ") and size.endswith("%"):
+            try:
+                pct = int(size[4:-1])
+                if 0 < pct < 1000:
+                    time_extra = f' data-fit-pct="{pct}"'
+            except ValueError:
+                pass
     elif size.endswith("%"):
         time_style = f' style="font-size: {html.escape(size)}"'
 
@@ -1665,6 +1676,7 @@ def _render_clock(card: Card, indent: int = 2) -> str:
         + f' data-fmt="{html.escape(fmt)}"'
         + (' data-sec="1"' if sec else '')
         + time_style
+        + time_extra
         + '>--:--</div>'
     )
 
@@ -1679,8 +1691,16 @@ def _render_clock(card: Card, indent: int = 2) -> str:
 
         date_classes = "clock-date"
         date_style = ""
-        if date_fontsize == "fit":
+        date_extra = ""
+        if date_fontsize == "fit" or date_fontsize.startswith("fit "):
             date_classes += " icey_text_fit"
+            if date_fontsize.startswith("fit ") and date_fontsize.endswith("%"):
+                try:
+                    pct = int(date_fontsize[4:-1])
+                    if 0 < pct < 1000:
+                        date_extra = f' data-fit-pct="{pct}"'
+                except ValueError:
+                    pass
         elif date_fontsize:
             date_style = f' style="font-size: {html.escape(date_fontsize)}"'
 
@@ -1690,6 +1710,7 @@ def _render_clock(card: Card, indent: int = 2) -> str:
             + f'<div class="{date_classes}" id="{date_id}"'
             + f' data-dfmt="{html.escape(date_format)}"'
             + date_style
+            + date_extra
             + '>---</div>'
         )
 

@@ -10,6 +10,8 @@ function icey_textFit() {
 
 			const parentWidth = el.parentElement.offsetWidth;
 			let fontSize = parentWidth;
+			let fitPct = parseInt(el.getAttribute("data-fit-pct")) || 0;
+
 			el.style.fontSize = fontSize + "px";
 
 			for (let iter = 0; iter < 10; iter++) {
@@ -17,6 +19,11 @@ function icey_textFit() {
 				if (cw <= 0) break;
 				if (cw <= parentWidth) break;
 				fontSize = fontSize / (cw / parentWidth);
+				el.style.fontSize = fontSize + "px";
+			}
+
+			if (fitPct > 0 && fitPct !== 100) {
+				fontSize = fontSize * fitPct / 100;
 				el.style.fontSize = fontSize + "px";
 			}
 		});

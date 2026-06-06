@@ -359,13 +359,14 @@ type: clock
 time_zone: Europe/London
 time_format: "24"           # or "12"
 show_seconds: false
-clock_size: large           # small, medium, large, "150%" (percent), "fit" (auto-size)
+clock_size: large           # small, medium, large, "150%" (percent), "fit" (auto-size), "fit 75%" (auto-size then scale)
 no_background: true
 ```
 
 `clock_size` accepts named sizes (`small`, `medium`, `large`), a percentage
-string like `"150%"` to scale the text, or `"fit"` to auto-size text to fill
-the card width without wrapping.
+string like `"150%"` to scale the text, `"fit"` to auto-size text to fill
+the card width without wrapping, or `"fit 75%"` to auto-size and then scale
+down to 75% of the fill width.
 
 #### Date line (via `lightdash`)
 
@@ -378,7 +379,7 @@ clock_size: large
 lightdash:
   date_show: true
   date_format: default         # default (toDateString), iso (toISOString), locale (toLocaleDateString)
-  date_fontsize: "80%"         # same options as clock_size
+  date_fontsize: "80%"         # same options as clock_size (%, fit, fit 75%)
 ```
 
 ### sensor

@@ -1,3 +1,12 @@
+# Release Notes for v0.13.2 (2026-06-06)
+
+Clock auto-sizing gets more precise with percentage control and keeps text fitted as time ticks.
+
+- **Fit-text with fine-tuning:** `clock_size: fit` and `date_fontsize: fit` now accept a percentage suffix like `"fit 75%"` — auto-sizes text to fill the card width, then scales down to the specified percentage. Perfect when full-width is too wide.
+- **Text stays fitted as clock ticks:** The auto-sizing recalibrates every time the clock updates, so the time and date always fill the available width — even when the text length changes (e.g., seconds appearing).
+
+---
+
 # Release Notes for v0.13.1 (2026-06-06)
 
 Clock cards are more flexible with resizable text and an optional date line.
