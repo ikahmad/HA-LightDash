@@ -773,7 +773,10 @@ def _view_needs_fit_text(view: View) -> bool:
         check_cards = [c for s in view.sections for c in s.cards]
     for c in check_cards:
         if c.type == "clock":
-            if c.get("fontsize", "") == "fit" or c.get("date_fontsize", "") == "fit":
+            if c.get("clock_size", "") == "fit":
+                return True
+            ld = c.get("lightdash", {}) or {}
+            if isinstance(ld, dict) and ld.get("date_fontsize", "") == "fit":
                 return True
     return False
 
@@ -1638,14 +1641,11 @@ def _render_clock(card: Card, indent: int = 2) -> str:
     tz = card.get("time_zone", "Europe/London")
     fmt = card.get("time_format", "24")
     sec = card.get("show_seconds", False)
-    size = card.get("clock_size", "medium")
+    size = str(card.get("clock_size", "medium") or "")
     no_bg = card.get("no_background", False)
-    fontsize = str(card.get("fontsize", "") or "")
-    date_show = card.get("date_show", False)
-    date_format = card.get("date_format", "default")
-    date_fontsize = str(card.get("date_fontsize", "") or "")
 
-    size_class = f"clock-size-{size}"
+    named_sizes = {"small", "medium", "large"}
+    size_class = f"clock-size-{size}" if size in named_sizes else "clock-size-medium"
     attrs = {"class": f"ha-card clock-card {size_class}"}
     if no_bg:
         attrs["class"] += " clock-no-bg"
@@ -1654,10 +1654,10 @@ def _render_clock(card: Card, indent: int = 2) -> str:
 
     time_classes = "clock-digital"
     time_style = ""
-    if fontsize == "fit":
+    if size == "fit":
         time_classes += " icey_text_fit"
-    elif fontsize:
-        time_style = f' style="font-size: {html.escape(fontsize)}"'
+    elif size.endswith("%"):
+        time_style = f' style="font-size: {html.escape(size)}"'
 
     time_html = (
         f'<div class="{time_classes}" id="{clock_id}"'
@@ -1668,8 +1668,15 @@ def _render_clock(card: Card, indent: int = 2) -> str:
         + '>--:--</div>'
     )
 
+    ld = card.get("lightdash", {}) or {}
+    if not isinstance(ld, dict):
+        ld = {}
+
     date_html = ""
-    if date_show:
+    if ld.get("date_show", False):
+        date_format = ld.get("date_format", "default")
+        date_fontsize = str(ld.get("date_fontsize", "") or "")
+
         date_classes = "clock-date"
         date_style = ""
         if date_fontsize == "fit":

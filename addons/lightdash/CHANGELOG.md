@@ -1,11 +1,9 @@
 # Changelog
 
-## v0.13.0 (2026-06-06)
-- **Added:** `fontsize` clock card option — accepts a percentage string (`"150%"`, `"80%"`) to scale the time text, or `"fit"` to auto-size text to fill the card width
-- **Added:** `date_show` clock card option — shows the current date below the time
-- **Added:** `date_format` clock card option — `default` (toDateString), `iso` (toISOString date-only), or `locale` (toLocaleDateString)
-- **Added:** `date_fontsize` clock card option — same behaviour as `fontsize`, applied to the date line
-- **Added:** Automatic `scripts.js` inclusion and `icey_textFit()` initialisation when any clock card uses `fontsize: fit` or `date_fontsize: fit`
+## v0.13.1 (2026-06-06)
+- **Added:** Clock `clock_size` now accepts `"fit"` (auto-size to fill width) and percentage strings like `"150%"` (merge of former separate `fontsize` parameter)
+- **Added:** Clock date-line options (`date_show`, `date_format`, `date_fontsize`) are now nested under a `lightdash` sub-section to distinguish LightDash extensions from standard HA YAML
+- **Added:** Automatic `scripts.js` inclusion and `icey_textFit()` initialisation when `clock_size: fit` or `lightdash.date_fontsize: fit` is used
 
 ## v0.12.4 (2026-06-06)
 - **Fixed:** YAML editor inserted tab characters for indentation instead of spaces, causing parsing errors. Editor now uses 4-space indentation with `indentWithTabs: false`, and pasted content has tabs automatically converted to spaces.

@@ -458,24 +458,24 @@ def test_clock_card_renderer():
     assert 'Intl.DateTimeFormat("en-GB"' in html or "Intl.DateTimeFormat" in html
 
 
-def test_clock_fontsize_percent():
+def test_clock_size_percent():
     from app.parser import parse_dashboard
     from app.renderer import render_view
 
     raw: Dict[str, Any] = {
-        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "fontsize": "150%"}]}]
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "clock_size": "150%"}]}]
     }
     dashboard = parse_dashboard(raw)
     html = render_view(dashboard.views[0], dashboard)
     assert 'style="font-size: 150%"' in html
 
 
-def test_clock_fontsize_fit():
+def test_clock_size_fit():
     from app.parser import parse_dashboard
     from app.renderer import render_view
 
     raw: Dict[str, Any] = {
-        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "fontsize": "fit"}]}]
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "clock_size": "fit"}]}]
     }
     dashboard = parse_dashboard(raw)
     html = render_view(dashboard.views[0], dashboard)
@@ -489,7 +489,7 @@ def test_clock_date_default():
     from app.renderer import render_view
 
     raw: Dict[str, Any] = {
-        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "date_show": True}]}]
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "lightdash": {"date_show": True}}]}]
     }
     dashboard = parse_dashboard(raw)
     html = render_view(dashboard.views[0], dashboard)
@@ -503,7 +503,7 @@ def test_clock_date_iso():
     from app.renderer import render_view
 
     raw: Dict[str, Any] = {
-        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "date_show": True, "date_format": "iso"}]}]
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "lightdash": {"date_show": True, "date_format": "iso"}}]}]
     }
     dashboard = parse_dashboard(raw)
     html = render_view(dashboard.views[0], dashboard)
@@ -516,7 +516,7 @@ def test_clock_date_locale():
     from app.renderer import render_view
 
     raw: Dict[str, Any] = {
-        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "date_show": True, "date_format": "locale"}]}]
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "lightdash": {"date_show": True, "date_format": "locale"}}]}]
     }
     dashboard = parse_dashboard(raw)
     html = render_view(dashboard.views[0], dashboard)
@@ -529,7 +529,7 @@ def test_clock_date_fontsize():
     from app.renderer import render_view
 
     raw: Dict[str, Any] = {
-        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "date_show": True, "date_fontsize": "80%"}]}]
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "lightdash": {"date_show": True, "date_fontsize": "80%"}}]}]
     }
     dashboard = parse_dashboard(raw)
     html = render_view(dashboard.views[0], dashboard)
@@ -541,7 +541,7 @@ def test_clock_date_fontsize_fit_triggers_scripts():
     from app.renderer import render_view
 
     raw: Dict[str, Any] = {
-        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "date_show": True, "date_fontsize": "fit"}]}]
+        "views": [{"title": "Clock", "path": "clk", "cards": [{"type": "clock", "lightdash": {"date_show": True, "date_fontsize": "fit"}}]}]
     }
     dashboard = parse_dashboard(raw)
     html = render_view(dashboard.views[0], dashboard)

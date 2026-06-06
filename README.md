@@ -359,29 +359,26 @@ type: clock
 time_zone: Europe/London
 time_format: "24"           # or "12"
 show_seconds: false
-clock_size: large           # small / medium / large
+clock_size: large           # small, medium, large, "150%" (percent), "fit" (auto-size)
 no_background: true
 ```
 
-#### Font size
+`clock_size` accepts named sizes (`small`, `medium`, `large`), a percentage
+string like `"150%"` to scale the text, or `"fit"` to auto-size text to fill
+the card width without wrapping.
 
-Scale the clock text as a percentage of its default size, or set `fit` to
-auto-size text to fill the card width:
+#### Date line (via `lightdash`)
 
-```yaml
-type: clock
-fontsize: "150%"            # scale up/down, or "fit" for auto-size
-```
-
-#### Date line
-
-Show the current date below the time:
+Show the current date below the time. Options are nested under `lightdash` to
+make explicit they are LightDash-specific extensions:
 
 ```yaml
 type: clock
-date_show: true
-date_format: default         # default (toDateString), iso (toISOString), locale (toLocaleDateString)
-date_fontsize: "80%"         # same options as fontsize
+clock_size: large
+lightdash:
+  date_show: true
+  date_format: default         # default (toDateString), iso (toISOString), locale (toLocaleDateString)
+  date_fontsize: "80%"         # same options as clock_size
 ```
 
 ### sensor
