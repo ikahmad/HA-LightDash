@@ -955,11 +955,19 @@ const PUBLIC_BASE="{public_base}";
       mode: "yaml",
       theme: "default",
       lineNumbers: true,
-      indentUnit: 2,
-      tabSize: 2,
+      indentUnit: 4,
+      tabSize: 4,
+      indentWithTabs: false,
       lineWrapping: true,
       autoCloseBrackets: true,
       extraKeys: {{"Ctrl-S": () => saveDashboard()}}
+    }});
+    cm.on("beforeChange", function(cm2, change) {{
+      if (change.origin === "paste") {{
+        for (var i = 0; i < change.text.length; i++) {{
+          change.text[i] = change.text[i].replace(/\t/g, "    ");
+        }}
+      }}
     }});
   }} catch(e) {{
     cm = null;

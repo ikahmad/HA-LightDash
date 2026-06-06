@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.12.3 (2026-06-06)
+- **Fixed:** YAML editor inserted tab characters for indentation instead of spaces, causing parsing errors. Editor now uses 4-space indentation with `indentWithTabs: false`, and pasted content has tabs automatically converted to spaces.
+
 ## v0.12.2 (2026-06-06)
 - **Fixed:** Broad `align-items: flex-start` replacement in v0.12.0 accidentally changed all CSS flex containers from `center` to `flex-start` — entities, tiles, glance, button, heading, dimmer, and clock cards all had their content top-aligned instead of centered. Reverted all to `center` except the intended `.weather-current` rule.
 
