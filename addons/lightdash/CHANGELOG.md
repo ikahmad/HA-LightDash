@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.15.0 (2026-06-07)
+- **Refactored:** Replaced all inline HTML/JS string concatenation in `renderer.py` and `main.py` with `string.Template` files loaded from `app/templates/`. Same zero-dependency runtime cost (`Template.substitute()` ≈ Python `+` concat), but the HTML/JS is now readable, editable, and maintainable in its own `.html` files instead of buried in Python string literals.
+- **Extracted:** 7 HTML templates (`view.html`, `view_index.html`, `dashboard_index.html`, `dashboard_list.html`, `config.html`, `preview.html`, `error.html`) and 5 JS templates (`toggle_sync.js`, `slider_sync.js`, `dimmer.js`, `cover.js`, `auto_revert.js`) from inline code.
+- **Added:** `app/constants.py` — shared `_SW_SCRIPT` constant, eliminating the identical duplicate between `renderer.py` and `main.py`.
+- **Moved:** Clock JS (`uclk()`, interval, event listeners) from inline `render_view()` into `static/scripts.js` for reduced inline script size.
+
 ## v0.14.0 (2026-06-06)
 - **Added:** Badges bar on views — three badge types: `entity` (icon+name+live state, tap toggles binary entities), `shortcut` (icon+label, navigate to view or open URL), and `entity-filter` (conditionally shown based on entity state, with static render-time evaluation)
 - **Added:** Dynamic endpoint `GET /api/view/{dashboard}/{view_path}/badge/{idx}` for re-evaluating entity-filter badges on SSE trigger

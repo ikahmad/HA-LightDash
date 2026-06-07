@@ -1,3 +1,12 @@
+# Release Notes for v0.15.0 (2026-06-07)
+
+This release refactors how pages are rendered under the hood — no new features, but the code is now far easier to maintain and extend.
+
+- **Internal rendering moved to templates:** The HTML and JavaScript that makes up every page is now kept in separate template files (`app/templates/`) instead of being built with inline Python string concatenation. You won't notice any difference as a user — response times are unchanged — but future development will be much faster and less error-prone.
+- **Clock updates moved to a shared script:** The JavaScript that updates the clock on-screen is now loaded from a static file rather than inserted into every page. This makes pages slightly smaller and the clock behaviour easier to tweak.
+
+---
+
 # Release Notes for v0.14.0 (2026-06-06)
 
 Badges add compact context-aware controls to the top of any view — entity state at a glance, quick navigation, and conditional pills that appear and disappear based on what's happening in your home.

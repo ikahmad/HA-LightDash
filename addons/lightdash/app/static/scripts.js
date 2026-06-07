@@ -29,3 +29,9 @@ function icey_textFit() {
 		});
 	}, 10);
 }
+
+// ### Clock updates
+function uclk(){var n=new Date();document.querySelectorAll(".clock-digital").forEach(function(e){var o={hour:"2-digit",minute:"2-digit",timeZone:e.getAttribute("data-tz")||"Europe/London",hour12:e.getAttribute("data-fmt")!=="24"};if(e.getAttribute("data-sec"))o.second="2-digit";e.textContent=(new Intl.DateTimeFormat("en-GB",o)).format(n)});document.querySelectorAll(".clock-date").forEach(function(e){var df=e.getAttribute("data-dfmt")||"default";if(df==="iso")e.textContent=n.toISOString().split("T")[0];else if(df==="locale")e.textContent=n.toLocaleDateString();else e.textContent=n.toDateString()});if(typeof icey_textFit==="function")icey_textFit()}
+setInterval(uclk,30000);
+document.addEventListener("DOMContentLoaded",uclk);
+document.addEventListener("htmx:afterSwap",uclk);
