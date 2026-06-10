@@ -1,3 +1,16 @@
+# Release Notes for v0.16.0 (2026-06-10)
+
+Weather forecast cards are now powered by the Home Assistant WebSocket API, bringing live forecast data to your dashboards with automatic background refreshes.
+
+- **Live weather forecast via WebSocket:** Weather-forecast cards now fetch forecast data directly from Home Assistant's `weather.get_forecasts` service using the WebSocket API, instead of relying on entity attributes. This means forecast data is always fresh and works with all weather integrations — no more empty forecast sections.
+- **Lazy-loaded forecasts:** On page load, the current weather appears instantly while the forecast section loads in the background. No delay in seeing the current conditions.
+- **Auto-refreshing forecast cards:** When the weather entity updates (e.g. new forecast data arrives), the card re-renders itself automatically. No page refresh needed.
+- **30-minute forecast cache:** Forecast data is cached for 30 minutes so repeated page loads or multi-dashboard setups don't hammer the WebSocket API. Cache is invalidated automatically on weather entity state changes.
+- **Smart fallback:** If the WebSocket call fails or the addon is offline, the card falls back to reading forecast data from the entity's `attributes.forecast` — existing dashboards keep working with no config changes.
+- **Cover popup crash fixed:** The long-press cover position modal no longer crashes with a `KeyError` when auto-close is enabled (same `string.Template` delimiter fix as the dimmer template).
+
+---
+
 # Release Notes for v0.15.2 (2026-06-10)
 
 This release fixes a bug where live entity state updates via SSE could replace the entire page with just the state text.

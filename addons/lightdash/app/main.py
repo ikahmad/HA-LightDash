@@ -21,13 +21,14 @@ from fastapi.staticfiles import StaticFiles
 
 import sentry_sdk
 
-from app.compat import collect_entities, scan_dashboard
+from app.compat import _walk_cards, collect_entities, scan_dashboard
 from app.config import AppConfig
 from app.constants import _SW_SCRIPT
 from app.ha_client import HAClient
 from app.parser import parse_dashboard
 from app.renderer import _css_link, render_error, render_view, render_view_index
-from app.sse_manager import SSEManager, run_ha_websocket_forever
+from app.sse_manager import HAWebSocket, SSEManager
+from app.weather import ForecastCache, get_forecast, refresh_forecast
 
 logging.basicConfig(
     level=logging.INFO,
@@ -181,9 +182,19 @@ async def lifespan(app: FastAPI):
 
     logger.info("Starting HA WebSocket listener for %s", config.ha_url)
     sse = SSEManager()
-    ws_task = asyncio.create_task(
-        run_ha_websocket_forever(config.ha_url, config.ha_token, sse)
+    forecast_cache = ForecastCache()
+
+    def _on_weather_change(entity_id: str) -> None:
+        ws = getattr(app.state, "ws_client", None)
+        if ws:
+            asyncio.create_task(
+                refresh_forecast(entity_id, ws, forecast_cache, sse)
+            )
+
+    ws_client = HAWebSocket(
+        config.ha_url, config.ha_token, sse, on_weather_change=_on_weather_change
     )
+    ws_task = ws_client.start()
 
     def _warn_ws_done(t: asyncio.Task):
         if not t.cancelled() and t.exception() is not None:
@@ -202,6 +213,8 @@ async def lifespan(app: FastAPI):
     app.state.dashboards = dashboards
     app.state.ha_client = ha_client
     app.state.sse = sse
+    app.state.forecast_cache = forecast_cache
+    app.state.ws_client = ws_client
     app.state.base_path = config.base_path
     app.state.public_port = config.public_port
 
@@ -233,12 +246,7 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass
 
-    ws_task.cancel()
-    try:
-        await ws_task
-    except asyncio.CancelledError:
-        pass
-
+    await ws_client.stop()
     await ha_client.disconnect()
     logger.info("Shutdown complete")
 
@@ -360,12 +368,32 @@ async def dashboard_view(name: str, view_path: str):
             }
             entity_states = {s["entity_id"]: s for s in states}
 
+    forecast_data: dict = {}
+    matched_view = None
     for v in dashboard.views:
         if v.path == view_path:
-            return HTMLResponse(
-                render_view(v, dashboard, ha_url=ha_url, entity_icons=entity_icons, entity_states=entity_states, dashboard_name=name),
-                headers=_no_cache,
-            )
+            matched_view = v
+            break
+
+    if matched_view:
+        ws = getattr(app.state, "ws_client", None)
+        fc = getattr(app.state, "forecast_cache", None)
+        if ws and fc:
+            weather_entities: set = set()
+            for card in _walk_cards(matched_view):
+                if card.type == "weather-forecast":
+                    eid = card.get("entity", "")
+                    if eid:
+                        weather_entities.add(card.get("forecast_entity", "") or eid)
+            for eid in weather_entities:
+                flist = await get_forecast(eid, ws, fc, entity_states)
+                if flist:
+                    forecast_data[eid] = flist
+
+        return HTMLResponse(
+            render_view(matched_view, dashboard, ha_url=ha_url, entity_icons=entity_icons, entity_states=entity_states, dashboard_name=name, forecast_data=forecast_data),
+            headers=_no_cache,
+        )
 
     return HTMLResponse(
         render_error(f"View '{view_path}' not found in dashboard '{name}'."),
@@ -525,6 +553,53 @@ async def api_history(entity_id: str, hours: int = 24):
         return {"error": "HA not connected"}
     history = await ha.get_history(entity_id, hours)
     return history or []
+
+
+@app.get("/api/weather-forecast/{dashboard}/{view_path:path}")
+async def weather_forecast_api(dashboard: str, view_path: str, entity: str = ""):
+    if not entity:
+        return HTMLResponse("", status_code=400)
+
+    dashboards = getattr(app.state, "dashboards", {})
+    d = dashboards.get(dashboard)
+    if not d:
+        return HTMLResponse("", status_code=404)
+
+    ws = getattr(app.state, "ws_client", None)
+    fc = getattr(app.state, "forecast_cache", None)
+
+    ha = getattr(app.state, "ha_client", None)
+    entity_states = {}
+    if ha and ha.is_connected:
+        states = await ha.get_states()
+        if states:
+            entity_states = {s["entity_id"]: s for s in states}
+
+    forecast_list = []
+    if ws and fc:
+        import app.weather as weather_mod
+        forecast_list = await weather_mod.get_forecast(entity, ws, fc, entity_states)
+
+    cfg = getattr(app.state, "config", None)
+    ha_url = cfg.ha_url if cfg else ""
+
+    import app.renderer as r
+    r._base_path = getattr(app.state, "base_path", "")
+    r._entity_states = entity_states
+    r._ha_url = ha_url
+    r._dashboard_name = dashboard
+    r._view_path = view_path
+    r._forecast_data = {entity: forecast_list}
+
+    for v in d.views:
+        if v.path == view_path:
+            for card in _walk_cards(v):
+                if card.type == "weather-forecast" and card.get("entity") == entity:
+                    html = r._render_weather_forecast(card)
+                    return HTMLResponse(html, headers=_no_cache)
+            break
+
+    return HTMLResponse("", status_code=404)
 
 
 @app.get("/api/view/{dashboard}/{view_path}/badge/{idx}")

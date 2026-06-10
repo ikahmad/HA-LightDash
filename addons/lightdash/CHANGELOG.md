@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.16.0 (2026-06-10)
+- **Added:** `HAWebSocket` class in `sse_manager.py` — refactored the existing receive-only WS connection to support bidirectional request/response with message ID tracking and `asyncio.Future` resolution. Exposes `call_service(domain, service, data, *, return_response, target)`.
+- **Added:** `app/weather.py` — `ForecastCache` with 30-min TTL and `get_forecast()` helper that reads from cache → WebSocket `call_service` → entity attributes fallback.
+- **Added:** `GET /api/weather-forecast/{dashboard}/{view_path}` endpoint for HTMX lazy-loading weather-forecast cards via `hx-trigger="load"` and reactive refresh via `hx-trigger="sse:forecast_<entity>"`.
+- **Added:** Background forecast refresh — when a weather entity state changes via the HA WebSocket, a background task fetches fresh forecast data (if cache is stale) and broadcasts an SSE event to trigger card re-renders.
+- **Changed:** Weather-forecast card now accepts `forecast_data` via `_forecast_data` global, prioritized over `entity.attributes.forecast`. Card output includes HTMX lazy-load and SSE refresh attributes.
+- **Fixed:** Template `$auto_close_resethideCover` parser error in `cover.js` — same `string.Template` delimiter fix as the dimmer template.
+
 ## v0.15.2 (2026-06-10)
 - **Fixed:** Entity state SSE swaps no longer wipe the entire page body. Added `hx-target="this"` to entity state `<span>` elements so the htmx SSE extension targets the span itself instead of inheriting `hx-target="body"` from ancestor card containers.
 

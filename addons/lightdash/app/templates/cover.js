@@ -47,8 +47,8 @@ if(leftEl){leftEl.innerHTML="";if(favVals){favVals.split(",").forEach(function(v
 
 function hideCover(){m.style.display="none";_curEid=""}
 
-closeBtn.addEventListener("click",function(){$auto_close_resethideCover()});
-m.addEventListener("click",function(e){if(e.target===m){$auto_close_resethideCover()}});
+closeBtn.addEventListener("click",function(){${auto_close_reset}hideCover()});
+m.addEventListener("click",function(e){if(e.target===m){${auto_close_reset}hideCover()}});
 upBtn.addEventListener("click",function(){doCoverAction("cover.open_cover");setPos(100)});
 stopBtn.addEventListener("click",function(){doCoverAction("cover.stop_cover")});
 downBtn.addEventListener("click",function(){doCoverAction("cover.close_cover");setPos(0)});

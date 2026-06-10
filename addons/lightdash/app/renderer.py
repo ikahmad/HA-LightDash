@@ -67,7 +67,9 @@ _entity_icons: Dict[str, str] = {}
 _entity_states: Dict[str, Any] = {}
 _ha_url: str = ""
 _dashboard_name: str = ""
+_view_path: str = ""
 _base_path: str = ""
+_forecast_data: Dict[str, list] = {}
 _via_ingress = contextvars.ContextVar("renderer_via_ingress", default=False)
 _icon_svg_cache: Dict[str, str] = OrderedDict()
 _ICON_CACHE_MAX = 200
@@ -104,12 +106,14 @@ def register(type_name: str):
     return decorator
 
 
-def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons: Optional[dict] = None, entity_states: Optional[dict] = None, dashboard_name: str = "") -> str:
-    global _entity_icons, _entity_states, _ha_url, _dashboard_name
+def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons: Optional[dict] = None, entity_states: Optional[dict] = None, dashboard_name: str = "", forecast_data: Optional[dict] = None) -> str:
+    global _entity_icons, _entity_states, _ha_url, _dashboard_name, _view_path, _forecast_data
     _entity_icons = entity_icons or {}
     _entity_states = entity_states or {}
     _ha_url = ha_url or ""
     _dashboard_name = dashboard_name or ""
+    _view_path = view.path
+    _forecast_data = forecast_data or {}
 
     _prefetch_icons(view)
 
@@ -1493,12 +1497,15 @@ def _render_weather_forecast(card: Card, indent: int = 2) -> str:
     condition = state.get("state", "") if state else ""
     temp_unit = attrs_data.get("temperature_unit", "°C")
 
-    if forecast_eid:
-        fc_state = _entity_states.get(forecast_eid, {})
-        fc_attrs = fc_state.get("attributes", {}) if fc_state else {}
-        forecast_list = fc_attrs.get("forecast", [])
-    else:
-        forecast_list = attrs_data.get("forecast", [])
+    fc_entity_key = forecast_eid or eid
+    forecast_list = _forecast_data.get(fc_entity_key, [])
+    if not forecast_list:
+        if forecast_eid:
+            fc_state = _entity_states.get(forecast_eid, {})
+            fc_attrs = fc_state.get("attributes", {}) if fc_state else {}
+            forecast_list = fc_attrs.get("forecast", [])
+        else:
+            forecast_list = attrs_data.get("forecast", [])
 
     def _fmt_temp(val, unit=temp_unit, should_round=round_temp):
         if val is None:
@@ -1606,7 +1613,15 @@ def _render_weather_forecast(card: Card, indent: int = 2) -> str:
                 )
             content += _SP * (indent + 1) + '</div>\n'
 
-    return _h("div", {"class": "ha-card weather-card"}, content, indent)
+    extra_attrs: Dict[str, str] = {
+        "class": "ha-card weather-card",
+        "data-forecast-entity": eid,
+        "hx-trigger": f"load, sse:forecast_{eid.replace('.', '_')}",
+        "hx-get": _url(f"/api/weather-forecast/{_dashboard_name}/{_view_path}?entity={eid}"),
+        "hx-target": "this",
+        "hx-swap": "outerHTML",
+    }
+    return _h("div", extra_attrs, content, indent)
 
 
 # ---- Helpers --------------------------------------------------------------
