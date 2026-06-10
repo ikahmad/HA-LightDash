@@ -1,3 +1,11 @@
+# Release Notes for v0.16.1 (2026-06-10)
+
+Fixed an issue where weather forecast cards would repeatedly re-fetch forecast data in a loop, flooding the server and causing the card to flicker.
+
+- **Weather forecast polling loop fixed:** The weather forecast card no longer re-fetches forecast data in an infinite loop. On the initial page load, the forecast fetches once in the background. Once the forecast data is available, the card stays stable until a weather state change triggers a fresh update via Server-Sent Events.
+
+---
+
 # Release Notes for v0.16.0 (2026-06-10)
 
 Weather forecast cards are now powered by the Home Assistant WebSocket API, bringing live forecast data to your dashboards with automatic background refreshes.

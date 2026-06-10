@@ -1613,10 +1613,16 @@ def _render_weather_forecast(card: Card, indent: int = 2) -> str:
                 )
             content += _SP * (indent + 1) + '</div>\n'
 
+    sse_trigger = f"sse:forecast_{eid.replace('.', '_')}"
+    triggers = sse_trigger
+    # Only lazy-load on initial cold render (no cached/WS data AND no attributes forecast)
+    fc_key = forecast_eid or eid
+    if fc_key not in _forecast_data and not forecast_list:
+        triggers = f"load, {sse_trigger}"
     extra_attrs: Dict[str, str] = {
         "class": "ha-card weather-card",
         "data-forecast-entity": eid,
-        "hx-trigger": f"load, sse:forecast_{eid.replace('.', '_')}",
+        "hx-trigger": triggers,
         "hx-get": _url(f"/api/weather-forecast/{_dashboard_name}/{_view_path}?entity={eid}"),
         "hx-target": "this",
         "hx-swap": "outerHTML",

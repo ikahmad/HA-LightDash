@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.16.1 (2026-06-10)
+- **Fixed:** `hx-trigger="load"` infinite polling on weather-forecast cards — `load` now only fires on the initial cold render. Once forecast data has been fetched via the HTMX endpoint, the returned card omits `load` from `hx-trigger`, breaking the request loop.
+
 ## v0.16.0 (2026-06-10)
 - **Added:** `HAWebSocket` class in `sse_manager.py` — refactored the existing receive-only WS connection to support bidirectional request/response with message ID tracking and `asyncio.Future` resolution. Exposes `call_service(domain, service, data, *, return_response, target)`.
 - **Added:** `app/weather.py` — `ForecastCache` with 30-min TTL and `get_forecast()` helper that reads from cache → WebSocket `call_service` → entity attributes fallback.
