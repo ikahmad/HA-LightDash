@@ -41,8 +41,8 @@ if(leftEl){leftEl.innerHTML="";if(favVals){favVals.split(",").forEach(function(v
 
 function hideDimmer(){m.style.display="none";_curEid=""}
 
-closeBtn.addEventListener("click",function(){$auto_close_resethideDimmer()});
-m.addEventListener("click",function(e){if(e.target===m){$auto_close_resethideDimmer()}});
+closeBtn.addEventListener("click",function(){${auto_close_reset}hideDimmer()});
+m.addEventListener("click",function(e){if(e.target===m){${auto_close_reset}hideDimmer()}});
 
 iconEl.addEventListener("click",function(){
 if(!_curEid)return;

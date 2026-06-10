@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.15.1 (2026-06-10)
+- **Fixed:** Template `$auto_close_resethideDimmer` parser error where `string.Template` merged the placeholder with adjacent text — added `{}` braces to delimit `$auto_close_reset` in `dimmer.js` template, fixing `KeyError` crash on views with light entities.
+
 ## v0.15.0 (2026-06-07)
 - **Refactored:** Replaced all inline HTML/JS string concatenation in `renderer.py` and `main.py` with `string.Template` files loaded from `app/templates/`. Same zero-dependency runtime cost (`Template.substitute()` ≈ Python `+` concat), but the HTML/JS is now readable, editable, and maintainable in its own `.html` files instead of buried in Python string literals.
 - **Extracted:** 7 HTML templates (`view.html`, `view_index.html`, `dashboard_index.html`, `dashboard_list.html`, `config.html`, `preview.html`, `error.html`) and 5 JS templates (`toggle_sync.js`, `slider_sync.js`, `dimmer.js`, `cover.js`, `auto_revert.js`) from inline code.

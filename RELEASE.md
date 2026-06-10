@@ -1,3 +1,11 @@
+# Release Notes for v0.15.1 (2026-06-10)
+
+This release fixes a crash that prevented the light dimmer popup from working when any light entity was present on a view.
+
+- **Long-press dimmer crash fixed:** Opening a dashboard with any light tile or light entity row no longer crashes the server with a `KeyError`. The dimmer popup now works as expected.
+
+---
+
 # Release Notes for v0.15.0 (2026-06-07)
 
 This release refactors how pages are rendered under the hood — no new features, but the code is now far easier to maintain and extend.
