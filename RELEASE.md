@@ -1,46 +1,18 @@
 # Release Notes for v0.16.1 (2026-06-10)
 
-Fixed an issue where weather forecast cards would repeatedly re-fetch forecast data in a loop, flooding the server and causing the card to flicker.
-
-- **Weather forecast polling loop fixed:** The weather forecast card no longer re-fetches forecast data in an infinite loop. On the initial page load, the forecast fetches once in the background. Once the forecast data is available, the card stays stable until a weather state change triggers a fresh update via Server-Sent Events.
-
----
-
-# Release Notes for v0.16.0 (2026-06-10)
-
-Weather forecast cards are now powered by the Home Assistant WebSocket API, bringing live forecast data to your dashboards with automatic background refreshes.
+Weather forecast cards are now powered by the Home Assistant WebSocket API, bringing live forecast data to your dashboards with automatic background refreshes and a handful of stability fixes.
 
 - **Live weather forecast via WebSocket:** Weather-forecast cards now fetch forecast data directly from Home Assistant's `weather.get_forecasts` service using the WebSocket API, instead of relying on entity attributes. This means forecast data is always fresh and works with all weather integrations — no more empty forecast sections.
 - **Lazy-loaded forecasts:** On page load, the current weather appears instantly while the forecast section loads in the background. No delay in seeing the current conditions.
 - **Auto-refreshing forecast cards:** When the weather entity updates (e.g. new forecast data arrives), the card re-renders itself automatically. No page refresh needed.
 - **30-minute forecast cache:** Forecast data is cached for 30 minutes so repeated page loads or multi-dashboard setups don't hammer the WebSocket API. Cache is invalidated automatically on weather entity state changes.
 - **Smart fallback:** If the WebSocket call fails or the addon is offline, the card falls back to reading forecast data from the entity's `attributes.forecast` — existing dashboards keep working with no config changes.
-- **Cover popup crash fixed:** The long-press cover position modal no longer crashes with a `KeyError` when auto-close is enabled (same `string.Template` delimiter fix as the dimmer template).
-
----
-
-# Release Notes for v0.15.2 (2026-06-10)
-
-This release fixes a bug where live entity state updates via SSE could replace the entire page with just the state text.
-
-- **Full-page swap on state update fixed:** When an entity (like a cover) changes state, the live update no longer replaces the entire page body with just the state string (e.g. "open" or "opening"). The dimmer popup fix from last version is also included.
-
----
-
-# Release Notes for v0.15.1 (2026-06-10)
-
-This release fixes a crash that prevented the light dimmer popup from working when any light entity was present on a view.
-
+- **Forecast polling loop fixed:** The weather forecast card no longer re-fetches forecast data in an infinite loop. On the initial page load, the forecast fetches once in the background, then stays stable until a weather state change triggers a refresh.
 - **Long-press dimmer crash fixed:** Opening a dashboard with any light tile or light entity row no longer crashes the server with a `KeyError`. The dimmer popup now works as expected.
-
----
-
-# Release Notes for v0.15.0 (2026-06-07)
-
-This release refactors how pages are rendered under the hood — no new features, but the code is now far easier to maintain and extend.
-
-- **Internal rendering moved to templates:** The HTML and JavaScript that makes up every page is now kept in separate template files (`app/templates/`) instead of being built with inline Python string concatenation. You won't notice any difference as a user — response times are unchanged — but future development will be much faster and less error-prone.
-- **Clock updates moved to a shared script:** The JavaScript that updates the clock on-screen is now loaded from a static file rather than inserted into every page. This makes pages slightly smaller and the clock behaviour easier to tweak.
+- **Cover popup crash fixed:** The long-press cover position modal no longer crashes with a `KeyError` when auto-close is enabled.
+- **Full-page swap on state update fixed:** When an entity (like a cover) changes state, the live update no longer replaces the entire page body with just the state string (e.g. "open" or "opening").
+- **Internal rendering engine refactored:** The HTML and JavaScript that makes up every page is now kept in separate template files instead of being built with inline Python string concatenation. You won't notice any difference as a user — response times are unchanged — but future development will be much faster and less error-prone.
+- **Clock updates moved to a shared script:** The JavaScript that updates the clock on-screen is now loaded from a static file rather than inserted into every page, making pages slightly smaller and clock behaviour easier to tweak.
 
 ---
 
