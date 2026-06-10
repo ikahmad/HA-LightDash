@@ -1,3 +1,11 @@
+# Release Notes for v0.15.2 (2026-06-10)
+
+This release fixes a bug where live entity state updates via SSE could replace the entire page with just the state text.
+
+- **Full-page swap on state update fixed:** When an entity (like a cover) changes state, the live update no longer replaces the entire page body with just the state string (e.g. "open" or "opening"). The dimmer popup fix from last version is also included.
+
+---
+
 # Release Notes for v0.15.1 (2026-06-10)
 
 This release fixes a crash that prevented the light dimmer popup from working when any light entity was present on a view.

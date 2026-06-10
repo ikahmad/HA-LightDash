@@ -578,6 +578,7 @@ def _entity_span(entity_id: str, card_id: str = "", indent: int = 0) -> str:
             attrs["data-brightness"] = str(brightness)
             attrs["style"] = f"--b: {pct}"
     attrs["hx-swap"] = "innerHTML"
+    attrs["hx-target"] = "this"
     sse_event = "entity_" + entity_id.replace(".", "_")
     attrs["sse-swap"] = sse_event
     return _h("span", attrs, html.escape(display) if display is not None else "", indent)

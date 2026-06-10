@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.15.2 (2026-06-10)
+- **Fixed:** Entity state SSE swaps no longer wipe the entire page body. Added `hx-target="this"` to entity state `<span>` elements so the htmx SSE extension targets the span itself instead of inheriting `hx-target="body"` from ancestor card containers.
+
 ## v0.15.1 (2026-06-10)
 - **Fixed:** Template `$auto_close_resethideDimmer` parser error where `string.Template` merged the placeholder with adjacent text — added `{}` braces to delimit `$auto_close_reset` in `dimmer.js` template, fixing `KeyError` crash on views with light entities.
 
