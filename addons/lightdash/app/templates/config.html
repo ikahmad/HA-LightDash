@@ -310,7 +310,7 @@ const PUBLIC_BASE="$public_base";
 
   async function addDashboard() {
     const name = prompt("Dashboard name (URL-safe, e.g. living-room):");
-    if (!name || !name.match(/^[a-zA-Z0-9_-]+$/)) {
+    if (!name || !name.match(/^[a-zA-Z0-9_-]+$$/)) {
       if (name) setStatus("Invalid name. Use letters, numbers, hyphens, underscores.", "error");
       return;
     }
@@ -360,7 +360,7 @@ const PUBLIC_BASE="$public_base";
     if (!currentName) return;
     const newName = prompt('New name for "' + currentName + '" (URL-safe):', currentName);
     if (!newName || newName === currentName) return;
-    if (!newName.match(/^[a-zA-Z0-9_-]+$/)) {
+    if (!newName.match(/^[a-zA-Z0-9_-]+$$/)) {
       setStatus("Invalid name. Use letters, numbers, hyphens, underscores.", "error");
       return;
     }

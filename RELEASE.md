@@ -1,3 +1,11 @@
+# Release Notes for v0.16.2 (2026-06-10)
+
+One more stability fix for the config page.
+
+- **Config page 500 error fixed:** The config page no longer crashes when you try to add or rename a dashboard. Two JavaScript regex patterns used bare `$` characters that conflicted with Python's `string.Template` parser, causing a server-side 500 error.
+
+---
+
 # Release Notes for v0.16.1 (2026-06-10)
 
 Weather forecast cards are now powered by the Home Assistant WebSocket API, bringing live forecast data to your dashboards with automatic background refreshes and a handful of stability fixes.

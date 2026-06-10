@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.16.2 (2026-06-10)
+- **Fixed:** Config page 500 error — escaped bare `$` in JS regex `/^[a-zA-Z0-9_-]+$/` patterns within `config.html` `string.Template` to prevent `ValueError: Invalid placeholder`.
+
 ## v0.16.1 (2026-06-10)
 - **Fixed:** `hx-trigger="load"` infinite polling on weather-forecast cards — `load` now only fires on the initial cold render. Once forecast data has been fetched via the HTMX endpoint, the returned card omits `load` from `hx-trigger`, breaking the request loop.
 
