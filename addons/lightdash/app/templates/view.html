@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>$title</title>
+$css_link
+<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+<script src="https://unpkg.com/htmx-ext-sse@2.2.4/dist/sse.js"></script>
+$sw_script
+$head_extra
+</head>
+<body>
+$body_script
+<div class="lv-view" id="view-$path" hx-ext="sse" sse-connect="$sse_url" style="$bg">
+$badges
+$cards_html
+</div>
+$modal_html
+$body_tail
+</body>
+</html>

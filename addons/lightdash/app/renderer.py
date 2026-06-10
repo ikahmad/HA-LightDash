@@ -7,9 +7,12 @@ import json
 import logging
 import re
 from collections import OrderedDict
+from pathlib import Path
+from string import Template
 from typing import Any, Dict, List, Optional, Tuple
 
 from app.compat import JINJA_RE
+from app.constants import _SW_SCRIPT
 from app.models import Action, Card, Dashboard, Section, View
 
 logger = logging.getLogger(__name__)
@@ -64,17 +67,30 @@ _entity_icons: Dict[str, str] = {}
 _entity_states: Dict[str, Any] = {}
 _ha_url: str = ""
 _dashboard_name: str = ""
+_view_path: str = ""
 _base_path: str = ""
+_forecast_data: Dict[str, list] = {}
 _via_ingress = contextvars.ContextVar("renderer_via_ingress", default=False)
 _icon_svg_cache: Dict[str, str] = OrderedDict()
 _ICON_CACHE_MAX = 200
 
-_SW_SCRIPT = (
-    '<script>'
-    'if(navigator.serviceWorker){navigator.serviceWorker.getRegistrations().then(function(r){'
-    'for(var i=0;i<r.length;i++){r[i].unregister()}})}'
-    '</script>\n'
-)
+_TPL_DIR = Path(__file__).parent / "templates"
+
+def _load_tpl(name: str) -> Template:
+    return Template((_TPL_DIR / name).read_text())
+
+_TPL_VIEW = _load_tpl("view.html")
+_TPL_VIEW_INDEX = _load_tpl("view_index.html")
+_TPL_DASH_INDEX = _load_tpl("dashboard_index.html")
+_TPL_ERROR = _load_tpl("error.html")
+_TPL_TOGGLE_SYNC = _load_tpl("toggle_sync.js")
+_TPL_SLIDER_SYNC = _load_tpl("slider_sync.js")
+_TPL_DIMMER = _load_tpl("dimmer.js")
+_TPL_COVER = _load_tpl("cover.js")
+_TPL_AUTO_REVERT = _load_tpl("auto_revert.js")
+
+_DIMMER_MODAL_HTML = (_TPL_DIR / "dimmer_modal.html").read_text() if (_TPL_DIR / "dimmer_modal.html").exists() else ""
+_COVER_MODAL_HTML = (_TPL_DIR / "cover_modal.html").read_text() if (_TPL_DIR / "cover_modal.html").exists() else ""
 
 
 def _url(path: str) -> str:
@@ -90,12 +106,14 @@ def register(type_name: str):
     return decorator
 
 
-def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons: Optional[dict] = None, entity_states: Optional[dict] = None, dashboard_name: str = "") -> str:
-    global _entity_icons, _entity_states, _ha_url, _dashboard_name
+def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons: Optional[dict] = None, entity_states: Optional[dict] = None, dashboard_name: str = "", forecast_data: Optional[dict] = None) -> str:
+    global _entity_icons, _entity_states, _ha_url, _dashboard_name, _view_path, _forecast_data
     _entity_icons = entity_icons or {}
     _entity_states = entity_states or {}
     _ha_url = ha_url or ""
     _dashboard_name = dashboard_name or ""
+    _view_path = view.path
+    _forecast_data = forecast_data or {}
 
     _prefetch_icons(view)
 
@@ -129,114 +147,12 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.min.css">\n'
         )
     if _view_needs_toggle_sync(view):
-        state_api_url = _url("/api/state/")
-        head_extra += (
-            '<script>\n'
-            'var sau="' + state_api_url + '";\n'
-            'function st(){'
-            'document.querySelectorAll(".tile-card").forEach(function(e){'
-            'var s=e.querySelector(".entity-state"),t=e.querySelector(".toggle-input");'
-            'if(s){var o=s.textContent.trim()==="on";if(t)t.checked=o;e.classList.toggle("entity-on",o);e.classList.toggle("entity-off",!o);}'
-            '});'
-            'document.querySelectorAll(".entities-card .entity-row").forEach(function(e){'
-            'var s=e.querySelector(".entity-state"),t=e.querySelector(".toggle-input");'
-            'if(s){var o=s.textContent.trim()==="on";if(t)t.checked=o;e.classList.toggle("entity-on",o);e.classList.toggle("entity-off",!o);}'
-            '});}\n'
-            'function uc(s){'
-            'var t0=s.textContent.trim().toLowerCase();'
-            'var c=s.closest(".tile-card,.entity-row,.glance-item,.button-card,button");'
-            'if(!c||(t0!=="on"&&t0!=="off"))return;'
-            'var p=t0==="off"?0:+s.style.getPropertyValue("--b")||100;'
-            'p=Math.max(0,Math.min(100,p));'
-            'var r=Math.round(221+25*p/100),g=Math.round(221-26*p/100),b=Math.round(221-153*p/100);'
-            'var clr="#"+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);'
-            'if(c.classList.contains("tile-card"))c.style.setProperty("--tile-color",clr);'
-            'else c.style.setProperty("--state-color",clr);'
-            '}\n'
-             'document.addEventListener("DOMContentLoaded",function(){st();document.querySelectorAll(".entity-state").forEach(uc);});\n'
-             'document.addEventListener("htmx:afterSwap",function(){st();document.querySelectorAll(".entity-state").forEach(uc);});\n'
-              'document.addEventListener("htmx:sseMessage",function(e){'
-              'st();'
-              'var s=e.target;'
-              'if(!s||!s.classList.contains("entity-state"))return;'
-             'var eid=s.getAttribute("data-entity");'
-             'if(eid&&s.getAttribute("data-brightness")){'
-             'fetch(sau+eid).then(function(r){return r.json()}).then(function(d){'
-             'if(d&&d.attributes&&d.attributes.brightness){'
-             'var p=Math.round(d.attributes.brightness/255*100);'
-             's.style.setProperty("--b",p);'
-             's.setAttribute("data-brightness",d.attributes.brightness);}'
-             'uc(s);});'
-             '}else{uc(s);}'
-             '});\n'
-              'document.addEventListener("change",function(e){'
-              'var i=e.target;'
-              'if(!i.classList.contains("toggle-input"))return;'
-              'var on=i.checked;'
-              'var c=i.closest(".tile-card,.entity-row");'
-              'if(c){c.classList.toggle("entity-on",on);c.classList.toggle("entity-off",!on);}'
-              'var s=c&&c.querySelector(".entity-state");'
-              'if(s){var t0=s.textContent.trim().toLowerCase();if(t0==="on"||t0==="off")s.textContent=on?"on":"off";uc(s);}'
-              '});\n'
-              'document.addEventListener("click",function(e){'
-              'var c=e.target.closest(".tile-card,.entity-row");'
-              'if(!c)return;'
-              'if(e.target.closest("button,a,input,select,textarea,.toggle-switch,.entity-toggle"))return;'
-               'var s=c.querySelector(".entity-state"),t=c.querySelector(".toggle-input");'
-               'if(!s)return;'
-              'var x=s.textContent.trim().toLowerCase();'
-              'if(x!=="on"&&x!=="off")return;'
-              'var on=x==="on"?false:true;'
-              's.textContent=on?"on":"off";'
-               'if(t)t.checked=on;'
-              'c.classList.toggle("entity-on",on);'
-              'c.classList.toggle("entity-off",!on);'
-              'uc(s);'
-              '});\n'
-             '</script>\n'
-        )
+        head_extra += _TPL_TOGGLE_SYNC.substitute(state_api_url=_url("/api/state/"))
     if _view_needs_slider_sync(view):
-        state_api_url = _url("/api/state/")
-        head_extra += (
-            '<script>\n'
-             'function ss(e){'
-             'var s=e.target;'
-            'if(!s||!s.classList.contains("entity-state"))return;'
-            'var c=s.closest(".tile-card");'
-            'if(!c)return;'
-            'var r=c.querySelector(".feature-slider");'
-            'if(!r)return;'
-            'var eid=s.getAttribute("data-entity");'
-            'if(!eid)return;'
-            "fetch('" + state_api_url + "'+eid).then(function(resp){return resp.json()}).then(function(d){"
-            'if(d&&d.attributes&&d.attributes.brightness){r.value=Math.round(d.attributes.brightness/255*100);}'
-            '});'
-            '}\n'
-            'document.addEventListener("htmx:sseMessage",ss);\n'
-            '</script>\n'
-        )
-    if _view_needs_clock(view):
-        head_extra += (
-            '<script>\n'
-            'function uclk(){var n=new Date();'
-            'document.querySelectorAll(".clock-digital").forEach('
-            'function(e){var o={hour:"2-digit",minute:"2-digit",'
-            'timeZone:e.getAttribute("data-tz")||"Europe/London",'
-            'hour12:e.getAttribute("data-fmt")!=="24"};'
-            'if(e.getAttribute("data-sec"))o.second="2-digit";'
-            'e.textContent=(new Intl.DateTimeFormat("en-GB",o)).format(n)});'
-            'document.querySelectorAll(".clock-date").forEach('
-            'function(e){var df=e.getAttribute("data-dfmt")||"default";'
-            'if(df==="iso")e.textContent=n.toISOString().split("T")[0];'
-            'else if(df==="locale")e.textContent=n.toLocaleDateString();'
-            'else e.textContent=n.toDateString()});if(typeof icey_textFit==="function")icey_textFit()}\n'
-             'setInterval(uclk,30000);\n'
-             'document.addEventListener("DOMContentLoaded",uclk);\n'
-             'document.addEventListener("htmx:afterSwap",uclk);\n'
-             '</script>\n'
-        )
+        head_extra += _TPL_SLIDER_SYNC.substitute(state_api_url=_url("/api/state/"))
+    needs_clock = _view_needs_clock(view)
     needs_fit_text = _view_needs_fit_text(view)
-    if needs_fit_text:
+    if needs_clock or needs_fit_text:
         head_extra += '<script src="' + _url("/static/scripts.js") + '"></script>\n'
     modal_html = ""
     body_script = ""
@@ -253,171 +169,13 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             )
             auto_close_reset = "if(typeof _acMs!=='undefined'){clearTimeout(_acTimer);_acTimer=setTimeout(hideDimmer,_acMs)}"
 
-        modal_html += (
-            '<div id="dimmer-modal" class="dimmer-modal" style="display:none">\n'
-            '<div class="dimmer-content">\n'
-            '<div class="dimmer-header">\n'
-            '<span class="dimmer-name" id="dimmer-name"></span>\n'
-            '<button class="dimmer-close" id="dimmer-close-btn">&#x2715;</button>\n'
-            '</div>\n'
-            '<div class="dimmer-body">\n'
-            '<div class="dimmer-left" id="dimmer-left"></div>\n'
-            '<div class="dimmer-slider-wrap">\n'
-            '<div class="dimmer-track" id="dimmer-track">\n'
-            '<div class="dimmer-fill" id="dimmer-fill"></div>\n'
-            '</div>\n'
-            '</div>\n'
-            '<div class="dimmer-right">\n'
-            '<div class="dimmer-icon" id="dimmer-icon"></div>\n'
-            '<span class="dimmer-pct" id="dimmer-pct">0%</span>\n'
-            '</div>\n'
-            '</div>\n'
-            '</div>\n'
-            '</div>\n'
+        modal_html += _DIMMER_MODAL_HTML
+        head_extra += _TPL_DIMMER.substitute(
+            action_url=_url("/action"),
+            state_api_url=_url("/api/state/"),
+            auto_close_timer=auto_close_timer,
+            auto_close_reset=auto_close_reset,
         )
-
-        dimmer_js = (
-            '<script>\n'
-            'document.addEventListener("DOMContentLoaded",function(){\n'
-            'var m=document.getElementById("dimmer-modal");\n'
-            'var track=document.getElementById("dimmer-track");\n'
-            'var fill=document.getElementById("dimmer-fill");\n'
-            'var pct=document.getElementById("dimmer-pct");\n'
-            'var nameEl=document.getElementById("dimmer-name");\n'
-            'var closeBtn=document.getElementById("dimmer-close-btn");\n'
-            'var iconEl=document.getElementById("dimmer-icon");\n'
-            'var _curEid="",_curBri=0,_lastBri=100;\n'
-            'var _lpTimer=null,_acTimer=null;\n'
-
-            'function setBri(v){\n'
-            'v=Math.max(0,Math.min(100,Math.round(v)));\n'
-            '_curBri=v;\n'
-            'pct.textContent=v+"%";\n'
-            'fill.style.height=v+"%";\n'
-            'var r=Math.round(221-(221-246)*v/100);\n'
-            'var g=Math.round(221-(221-195)*v/100);\n'
-            'var b=Math.round(221-(221-68)*v/100);\n'
-            'fill.style.background="rgb("+r+","+g+","+b+")";\n'
-            '}\n'
-
-            'function sendBri(){\n'
-            'if(!_curEid)return;\n'
-            'navigator.sendBeacon("' + _url("/action") + '",JSON.stringify({entity_id:_curEid,action:"call-service",service:"light.turn_on",data:{brightness_pct:_curBri}}));\n'
-            '}\n'
-
-            'function showDimmer(eid,ename,ebri,isOn,iconSvg,favVals){\n'
-            '_curEid=eid;\n'
-            'nameEl.textContent=ename||"";\n'
-            'var b=isOn?Math.max(0,Math.min(100,Math.round((ebri||0)/255*100))):0;\n'
-            'if(isOn)_lastBri=b||100;\n'
-            'if(iconSvg){iconEl.innerHTML=iconSvg;iconEl.style.display=""}else{iconEl.innerHTML="";iconEl.style.display="none"}\n'
-            'setBri(b);\n'
-            + auto_close_timer +
-            'm.style.display="";\n'
-            'var leftEl=document.getElementById("dimmer-left");\n'
-            'if(leftEl){leftEl.innerHTML="";if(favVals){favVals.split(",").forEach(function(v){var btn=document.createElement("button");btn.textContent=v+"%";btn.className="dimmer-fav-btn";btn.addEventListener("click",function(){setBri(parseInt(v));sendBri();' + auto_close_reset + '});leftEl.appendChild(btn)})}}\n'
-            '}\n'
-
-            'function hideDimmer(){m.style.display="none";_curEid=""}\n'
-
-            'closeBtn.addEventListener("click",function(){' + auto_close_reset + 'hideDimmer()});\n'
-            'm.addEventListener("click",function(e){if(e.target===m){' + auto_close_reset + 'hideDimmer()}});\n'
-            '\n'
-            'iconEl.addEventListener("click",function(){\n'
-            'if(!_curEid)return;\n'
-            'var isOn=_curBri>0;\n'
-            'if(isOn){\n'
-            'navigator.sendBeacon("' + _url("/action") + '",JSON.stringify({entity_id:_curEid,action:"call-service",service:"light.turn_off"}));\n'
-            'setBri(0);\n'
-            '}else{\n'
-            'var b=_lastBri||100;\n'
-            'navigator.sendBeacon("' + _url("/action") + '",JSON.stringify({entity_id:_curEid,action:"call-service",service:"light.turn_on",data:{brightness_pct:b}}));\n'
-            'setBri(b);\n'
-            '}\n'
-            '});\n'
-
-            'var _drag=false;\n'
-            'function dragY(y){\n'
-            'var rect=track.getBoundingClientRect();\n'
-            'var v=Math.round((1-(y-rect.top)/rect.height)*100);\n'
-            'setBri(v);\n'
-            '}\n'
-
-            'track.addEventListener("touchstart",function(e){_drag=true;dragY(e.touches[0].clientY);' + auto_close_reset + '},true);\n'
-            'track.addEventListener("touchmove",function(e){if(_drag){e.preventDefault();dragY(e.touches[0].clientY)}},true);\n'
-            'track.addEventListener("touchend",function(e){if(_drag){_drag=false;sendBri();' + auto_close_reset + '}},true);\n'
-            'track.addEventListener("mousedown",function(e){_drag=true;dragY(e.clientY);' + auto_close_reset + '},true);\n'
-            'document.addEventListener("mousemove",function(e){if(_drag){e.preventDefault();dragY(e.clientY)}},true);\n'
-            'document.addEventListener("mouseup",function(e){if(_drag){_drag=false;sendBri();' + auto_close_reset + '}},true);\n'
-
-            'document.addEventListener("touchstart",function(e){\n'
-            'var row=e.target.closest(".tile-card[data-light-entity],.entity-row[data-light-entity]");\n'
-            'if(!row)return;\n'
-            'var eid=row.getAttribute("data-light-entity");\n'
-            'var favVals=row.getAttribute("data-fav-vals")||"";\n'
-            '_lpTimer=setTimeout(function(){\n'
-            'var ename=(row.querySelector(".tile-name")||row.querySelector(".entity-name")||{}).textContent||"";\n'
-            'var iconEl2=row.querySelector(".tile-icon svg,.entity-icon svg");\n'
-            'var iconSvg=iconEl2?iconEl2.outerHTML:"";\n'
-            'fetch("' + _url("/api/state/") + '"+encodeURIComponent(eid)).then(function(r){return r.json()}).then(function(d){\n'
-            'if(d&&!d.error){\n'
-            'var isOn=d.state==="on";\n'
-            'var ebri=(d.attributes&&d.attributes.brightness)||0;\n'
-            'showDimmer(eid,ename,ebri,isOn,iconSvg,favVals);\n'
-            '}else{\n'
-            'showDimmer(eid,ename,0,false,iconSvg,favVals);\n'
-            '}\n'
-            '}).catch(function(){showDimmer(eid,ename,0,false,iconSvg,favVals)});\n'
-
-            'var blocker=function(ev){ev.preventDefault();ev.stopPropagation();document.removeEventListener("click",blocker,true)};\n'
-            'document.addEventListener("click",blocker,true);\n'
-            '},500);\n'
-            '},true);\n'
-
-            'document.addEventListener("touchmove",function(e){\n'
-            'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
-            '},true);\n'
-
-            'document.addEventListener("touchend",function(e){\n'
-            'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
-            '},true);\n'
-
-            'document.addEventListener("mousedown",function(e){\n'
-            'var row=e.target.closest(".tile-card[data-light-entity],.entity-row[data-light-entity]");\n'
-            'if(!row)return;\n'
-            'var eid=row.getAttribute("data-light-entity");\n'
-            'var favVals=row.getAttribute("data-fav-vals")||"";\n'
-            '_lpTimer=setTimeout(function(){\n'
-            'var ename=(row.querySelector(".tile-name")||row.querySelector(".entity-name")||{}).textContent||"";\n'
-            'var iconEl2=row.querySelector(".tile-icon svg,.entity-icon svg");\n'
-            'var iconSvg=iconEl2?iconEl2.outerHTML:"";\n'
-            'fetch("' + _url("/api/state/") + '"+encodeURIComponent(eid)).then(function(r){return r.json()}).then(function(d){\n'
-            'if(d&&!d.error){\n'
-            'var isOn=d.state==="on";\n'
-            'var ebri=(d.attributes&&d.attributes.brightness)||0;\n'
-            'showDimmer(eid,ename,ebri,isOn,iconSvg,favVals);\n'
-            '}else{\n'
-            'showDimmer(eid,ename,0,false,iconSvg,favVals);\n'
-            '}\n'
-            '}).catch(function(){showDimmer(eid,ename,0,false,iconSvg,favVals)});\n'
-            '\n'
-            'var blocker=function(ev){ev.preventDefault();ev.stopPropagation();document.removeEventListener("click",blocker,true)};\n'
-            'document.addEventListener("click",blocker,true);\n'
-            '},500);\n'
-            '},true);\n'
-            '\n'
-            'document.addEventListener("mousemove",function(e){\n'
-            'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
-            '},true);\n'
-            '\n'
-            'document.addEventListener("mouseup",function(e){\n'
-            'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
-            '},true);\n'
-
-            '});\n'
-            '</script>\n'
-        )
-        head_extra += dimmer_js
 
     if _view_needs_cover_modal(view):
         auto_close_timer = ""
@@ -428,208 +186,41 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             )
             auto_close_reset = "if(typeof _acMs!=='undefined'){clearTimeout(_acTimer);_acTimer=setTimeout(hideCover,_acMs)}"
 
-        modal_html += (
-            '<div id="cover-modal" class="cover-modal" style="display:none">\n'
-            '<div class="cover-content">\n'
-            '<div class="cover-header">\n'
-            '<span class="cover-name" id="cover-name"></span>\n'
-            '<button class="cover-close" id="cover-close-btn">&#x2715;</button>\n'
-            '</div>\n'
-            '<div class="cover-body">\n'
-            '<div class="cover-left" id="cover-left"></div>\n'
-            '<div class="cover-slider-wrap">\n'
-            '<div class="cover-track" id="cover-track">\n'
-            '<div class="cover-fill" id="cover-fill"></div>\n'
-            '</div>\n'
-            '</div>\n'
-            '<div class="cover-right">\n'
-            '<button class="cover-btn-up" id="cover-btn-up" aria-label="Open">&#x25B2;</button>\n'
-            '<span class="cover-pos" id="cover-pos">0%</span>\n'
-            '<button class="cover-btn-stop" id="cover-btn-stop" aria-label="Stop">&#x23F9;</button>\n'
-            '<button class="cover-btn-down" id="cover-btn-down" aria-label="Close">&#x25BC;</button>\n'
-            '</div>\n'
-            '</div>\n'
-            '</div>\n'
-            '</div>\n'
+        modal_html += _COVER_MODAL_HTML
+        head_extra += _TPL_COVER.substitute(
+            action_url=_url("/action"),
+            state_api_url=_url("/api/state/"),
+            auto_close_timer=auto_close_timer,
+            auto_close_reset=auto_close_reset,
         )
-
-        cover_js = (
-            '<script>\n'
-            'document.addEventListener("DOMContentLoaded",function(){\n'
-            'var m=document.getElementById("cover-modal");\n'
-            'var track=document.getElementById("cover-track");\n'
-            'var fill=document.getElementById("cover-fill");\n'
-            'var posEl=document.getElementById("cover-pos");\n'
-            'var nameEl=document.getElementById("cover-name");\n'
-            'var closeBtn=document.getElementById("cover-close-btn");\n'
-            'var upBtn=document.getElementById("cover-btn-up");\n'
-            'var stopBtn=document.getElementById("cover-btn-stop");\n'
-            'var downBtn=document.getElementById("cover-btn-down");\n'
-            'var _curEid="",_curPos=0;\n'
-            'var _lpTimer=null,_acTimer=null;\n'
-
-            'function setPos(v){\n'
-            'v=Math.max(0,Math.min(100,Math.round(v)));\n'
-            '_curPos=v;\n'
-            'posEl.textContent=v+"%";\n'
-            'fill.style.height=v+"%";\n'
-            'var p=v/100;\n'
-            'var r=Math.round(120+120*p);\n'
-            'var g=Math.round(180+30*p);\n'
-            'var b=Math.round(200-80*p);\n'
-            'fill.style.background="rgb("+r+","+g+","+b+")";\n'
-            '}\n'
-
-            'function sendPos(){\n'
-            'if(!_curEid)return;\n'
-            'navigator.sendBeacon("' + _url("/action") + '",JSON.stringify({entity_id:_curEid,action:"call-service",service:"cover.set_cover_position",data:{position:_curPos}}));\n'
-            '}\n'
-
-            'function doCoverAction(svc){\n'
-            'if(!_curEid)return;\n'
-            'navigator.sendBeacon("' + _url("/action") + '",JSON.stringify({entity_id:_curEid,action:"call-service",service:svc}));\n'
-            '}\n'
-
-            'function showCover(eid,ename,epos,favVals){\n'
-            '_curEid=eid;\n'
-            'nameEl.textContent=ename||"";\n'
-            'var p=epos!==null&&epos!==undefined?Math.max(0,Math.min(100,Math.round(epos))):50;\n'
-            'setPos(p);\n'
-            + auto_close_timer +
-            'm.style.display="";\n'
-            'var leftEl=document.getElementById("cover-left");\n'
-            'if(leftEl){leftEl.innerHTML="";if(favVals){favVals.split(",").forEach(function(v){var btn=document.createElement("button");btn.textContent=v+"%";btn.className="cover-fav-btn";btn.addEventListener("click",function(){setPos(parseInt(v));sendPos();' + auto_close_reset + '});leftEl.appendChild(btn)})}}\n'
-            '}\n'
-
-            'function hideCover(){m.style.display="none";_curEid=""}\n'
-
-            'closeBtn.addEventListener("click",function(){' + auto_close_reset + 'hideCover()});\n'
-            'm.addEventListener("click",function(e){if(e.target===m){' + auto_close_reset + 'hideCover()}});\n'
-            'upBtn.addEventListener("click",function(){doCoverAction("cover.open_cover");setPos(100)});\n'
-            'stopBtn.addEventListener("click",function(){doCoverAction("cover.stop_cover")});\n'
-            'downBtn.addEventListener("click",function(){doCoverAction("cover.close_cover");setPos(0)});\n'
-
-            'var _drag=false;\n'
-            'function dragY(y){\n'
-            'var rect=track.getBoundingClientRect();\n'
-            'var v=Math.round((1-(y-rect.top)/rect.height)*100);\n'
-            'setPos(v);\n'
-            '}\n'
-
-            'track.addEventListener("touchstart",function(e){_drag=true;dragY(e.touches[0].clientY);' + auto_close_reset + '},true);\n'
-            'track.addEventListener("touchmove",function(e){if(_drag){e.preventDefault();dragY(e.touches[0].clientY)}},true);\n'
-            'track.addEventListener("touchend",function(e){if(_drag){_drag=false;sendPos();' + auto_close_reset + '}},true);\n'
-            'track.addEventListener("mousedown",function(e){_drag=true;dragY(e.clientY);' + auto_close_reset + '},true);\n'
-            'document.addEventListener("mousemove",function(e){if(_drag){e.preventDefault();dragY(e.clientY)}},true);\n'
-            'document.addEventListener("mouseup",function(e){if(_drag){_drag=false;sendPos();' + auto_close_reset + '}},true);\n'
-
-            'document.addEventListener("touchstart",function(e){\n'
-            'var row=e.target.closest(".tile-card[data-cover-entity],.entity-row[data-cover-entity]");\n'
-            'if(!row)return;\n'
-            'var eid=row.getAttribute("data-cover-entity");\n'
-            'var favVals=row.getAttribute("data-fav-vals")||"";\n'
-            '_lpTimer=setTimeout(function(){\n'
-            'var ename=(row.querySelector(".tile-name")||row.querySelector(".entity-name")||{}).textContent||"";\n'
-            'fetch("' + _url("/api/state/") + '"+encodeURIComponent(eid)).then(function(r){return r.json()}).then(function(d){\n'
-            'if(d&&!d.error){\n'
-            'var epos=(d.attributes&&d.attributes.current_position);\n'
-            'showCover(eid,ename,epos,favVals);\n'
-            '}else{\n'
-            'showCover(eid,ename,50,favVals);\n'
-            '}\n'
-            '}).catch(function(){showCover(eid,ename,50,favVals)});\n'
-
-            'var blocker=function(ev){ev.preventDefault();ev.stopPropagation();document.removeEventListener("click",blocker,true)};\n'
-            'document.addEventListener("click",blocker,true);\n'
-            '},500);\n'
-            '},true);\n'
-
-            'document.addEventListener("touchmove",function(e){\n'
-            'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
-            '},true);\n'
-
-            'document.addEventListener("touchend",function(e){\n'
-            'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
-            '},true);\n'
-
-            'document.addEventListener("mousedown",function(e){\n'
-            'var row=e.target.closest(".tile-card[data-cover-entity],.entity-row[data-cover-entity]");\n'
-            'if(!row)return;\n'
-            'var eid=row.getAttribute("data-cover-entity");\n'
-            'var favVals=row.getAttribute("data-fav-vals")||"";\n'
-            '_lpTimer=setTimeout(function(){\n'
-            'var ename=(row.querySelector(".tile-name")||row.querySelector(".entity-name")||{}).textContent||"";\n'
-            'fetch("' + _url("/api/state/") + '"+encodeURIComponent(eid)).then(function(r){return r.json()}).then(function(d){\n'
-            'if(d&&!d.error){\n'
-            'var epos=(d.attributes&&d.attributes.current_position);\n'
-            'showCover(eid,ename,epos,favVals);\n'
-            '}else{\n'
-            'showCover(eid,ename,50,favVals);\n'
-            '}\n'
-            '}).catch(function(){showCover(eid,ename,50,favVals)});\n'
-            '\n'
-            'var blocker=function(ev){ev.preventDefault();ev.stopPropagation();document.removeEventListener("click",blocker,true)};\n'
-            'document.addEventListener("click",blocker,true);\n'
-            '},500);\n'
-            '},true);\n'
-            '\n'
-            'document.addEventListener("mousemove",function(e){\n'
-            'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
-            '},true);\n'
-            '\n'
-            'document.addEventListener("mouseup",function(e){\n'
-            'if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}\n'
-            '},true);\n'
-
-            '});\n'
-            '</script>\n'
-        )
-        head_extra += cover_js
 
     if dashboard.lightdash.auto_revert_seconds > 0:
         first_view_url = _url("/d/" + html.escape(_dashboard_name) + "/view/" + html.escape(dashboard.views[0].path))
-        ar_secs = dashboard.lightdash.auto_revert_seconds
-        body_script += (
-            '<script>\n'
-            'var _arTimer=null;\n'
-            'var _rvUrl=' + json.dumps(first_view_url) + ';\n'
-            'function resetAr(){if(_arTimer)clearTimeout(_arTimer);_arTimer=setTimeout(function(){window.location.href=_rvUrl},'
-            + str(ar_secs * 1000) + ')}\n'
-            'document.addEventListener("touchstart",resetAr,true);\n'
-            'document.addEventListener("click",resetAr,true);\n'
-            'document.addEventListener("scroll",resetAr,true);\n'
-            'document.addEventListener("DOMContentLoaded",resetAr);\n'
-            '</script>\n'
+        ar_secs = dashboard.lightdash.auto_revert_seconds * 1000
+        body_script += _TPL_AUTO_REVERT.substitute(
+            first_view_url=json.dumps(first_view_url),
+            ar_secs=str(ar_secs),
         )
 
     body_tail = ""
     if needs_fit_text:
         body_tail = '<script>window.addEventListener("DOMContentLoaded",()=>{icey_textFit()});</script>\n'
 
-    return (
-        '<!DOCTYPE html>\n'
-        '<html lang="en">\n'
-        '<head>\n'
-        '<meta charset="UTF-8">\n'
-        '<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">\n'
-        '<title>' + title + '</title>\n'
-        + _css_link(dashboard.lightdash.theme)
-        + '<script src="https://unpkg.com/htmx.org@2.0.4"></script>\n'
-        + '<script src="https://unpkg.com/htmx-ext-sse@2.2.4/dist/sse.js"></script>\n'
-        + _SW_SCRIPT
-        + head_extra +
-        '</head>\n'
-        '<body>\n'
-        + body_script +
-        '<div class="lv-view" id="view-' + path + '" hx-ext="sse" sse-connect="' + _url("/_sse") + '" style="' + bg + '">\n'
-        + _render_badges(view)
-        + cards_html + '\n'
-        + '</div>\n'
-        + modal_html
-        + body_tail
-        + '</body>\n'
-        + '</html>'
+    return _TPL_VIEW.substitute(
+        title=title,
+        css_link=_css_link(dashboard.lightdash.theme),
+        sw_script=_SW_SCRIPT,
+        head_extra=head_extra,
+        body_script=body_script,
+        path=path,
+        sse_url=_url("/_sse"),
+        bg=bg,
+        badges=_render_badges(view),
+        cards_html=cards_html + "\n",
+        modal_html=modal_html,
+        body_tail=body_tail,
     )
+
 
 
 def _render_section(section: Section, indent: int = 2) -> str:
@@ -683,25 +274,10 @@ def render_view_index(views: List[View], dashboard: Dashboard, dashboard_name: s
         if v.icon:
             links += '<span class="vi">' + html.escape(v.icon) + "</span> "
         links += html.escape(v.title or v.path) + "</a></li>\n"
-    return (
-        '<!DOCTYPE html>\n'
-        '<html lang="en">\n'
-        '<head>\n'
-        '<meta charset="UTF-8">\n'
-        '<meta name="viewport" content="width=device-width,initial-scale=1.0">\n'
-        '<title>LightDash</title>\n'
-        + _css_link(dashboard.lightdash.theme)
-        + _SW_SCRIPT +
-        '</head>\n'
-        '<body>\n'
-        '<div class="view-index">\n'
-        '<h1>LightDash</h1>\n'
-        '<ul>\n'
-        + links +
-        '</ul>\n'
-        '</div>\n'
-        '</body>\n'
-        '</html>'
+    return _TPL_VIEW_INDEX.substitute(
+        css_link=_css_link(dashboard.lightdash.theme),
+        sw_script=_SW_SCRIPT,
+        links=links,
     )
 
 
@@ -712,51 +288,20 @@ def render_dashboard_index(dashboards: List[Dict[str, str]], theme: str = "") ->
         title = d.get("title", name)
         href = _url("/d/" + html.escape(name))
         links += '    <li><a href="' + href + '">' + html.escape(title) + " (" + html.escape(name) + ")</a></li>\n"
-    return (
-        '<!DOCTYPE html>\n'
-        '<html lang="en">\n'
-        '<head>\n'
-        '<meta charset="UTF-8">\n'
-        '<meta name="viewport" content="width=device-width,initial-scale=1.0">\n'
-        '<title>LightDash</title>\n'
-        + _css_link(theme) +
-        + _SW_SCRIPT +
-        '</head>\n'
-        '<body>\n'
-        '<div class="view-index">\n'
-        '<h1>LightDash</h1>\n'
-        '<p>Select a dashboard:</p>\n'
-        '<ul>\n'
-        + links +
-        '</ul>\n'
-        '</div>\n'
-        '</body>\n'
-        '</html>'
+    return _TPL_DASH_INDEX.substitute(
+        css_link=_css_link(theme),
+        sw_script=_SW_SCRIPT,
+        links=links,
     )
 
 
 def render_error(message: str) -> str:
     msg = html.escape(message)
-    return (
-        '<!DOCTYPE html>\n'
-        '<html lang="en">\n'
-        '<head>\n'
-        '<meta charset="UTF-8">\n'
-        '<meta name="viewport" content="width=device-width,initial-scale=1.0">\n'
-        '<title>LightDash - Error</title>\n'
-        + _css_link()
-        + _SW_SCRIPT +
-        '</head>\n'
-        '<body>\n'
-        '<div class="view-index">\n'
-        '<h1>LightDash</h1>\n'
-        '<div class="error-card" style="background:#3a1a1a;border:1px solid #c44;padding:20px;border-radius:8px;color:#f88">'
-        + msg +
-        '</div>\n'
-        '<p><a href="' + _url("/") + '" style="color:#88f">Back to dashboards</a></p>\n'
-        '</div>\n'
-        '</body>\n'
-        '</html>'
+    return _TPL_ERROR.substitute(
+        css_link=_css_link(),
+        sw_script=_SW_SCRIPT,
+        message=msg,
+        home_url=_url("/"),
     )
 
 
@@ -1037,6 +582,7 @@ def _entity_span(entity_id: str, card_id: str = "", indent: int = 0) -> str:
             attrs["data-brightness"] = str(brightness)
             attrs["style"] = f"--b: {pct}"
     attrs["hx-swap"] = "innerHTML"
+    attrs["hx-target"] = "this"
     sse_event = "entity_" + entity_id.replace(".", "_")
     attrs["sse-swap"] = sse_event
     return _h("span", attrs, html.escape(display) if display is not None else "", indent)
@@ -1951,12 +1497,15 @@ def _render_weather_forecast(card: Card, indent: int = 2) -> str:
     condition = state.get("state", "") if state else ""
     temp_unit = attrs_data.get("temperature_unit", "°C")
 
-    if forecast_eid:
-        fc_state = _entity_states.get(forecast_eid, {})
-        fc_attrs = fc_state.get("attributes", {}) if fc_state else {}
-        forecast_list = fc_attrs.get("forecast", [])
-    else:
-        forecast_list = attrs_data.get("forecast", [])
+    fc_entity_key = forecast_eid or eid
+    forecast_list = _forecast_data.get(fc_entity_key, [])
+    if not forecast_list:
+        if forecast_eid:
+            fc_state = _entity_states.get(forecast_eid, {})
+            fc_attrs = fc_state.get("attributes", {}) if fc_state else {}
+            forecast_list = fc_attrs.get("forecast", [])
+        else:
+            forecast_list = attrs_data.get("forecast", [])
 
     def _fmt_temp(val, unit=temp_unit, should_round=round_temp):
         if val is None:
@@ -2064,7 +1613,21 @@ def _render_weather_forecast(card: Card, indent: int = 2) -> str:
                 )
             content += _SP * (indent + 1) + '</div>\n'
 
-    return _h("div", {"class": "ha-card weather-card"}, content, indent)
+    sse_trigger = f"sse:forecast_{eid.replace('.', '_')}"
+    triggers = sse_trigger
+    # Only lazy-load on initial cold render (no cached/WS data AND no attributes forecast)
+    fc_key = forecast_eid or eid
+    if fc_key not in _forecast_data and not forecast_list:
+        triggers = f"load, {sse_trigger}"
+    extra_attrs: Dict[str, str] = {
+        "class": "ha-card weather-card",
+        "data-forecast-entity": eid,
+        "hx-trigger": triggers,
+        "hx-get": _url(f"/api/weather-forecast/{_dashboard_name}/{_view_path}?entity={eid}"),
+        "hx-target": "this",
+        "hx-swap": "outerHTML",
+    }
+    return _h("div", extra_attrs, content, indent)
 
 
 # ---- Helpers --------------------------------------------------------------

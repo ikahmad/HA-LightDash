@@ -10,6 +10,7 @@ import signal
 import urllib.parse
 from contextlib import asynccontextmanager
 from pathlib import Path
+from string import Template
 from typing import Any, Dict
 
 import httpx
@@ -20,12 +21,14 @@ from fastapi.staticfiles import StaticFiles
 
 import sentry_sdk
 
-from app.compat import collect_entities, scan_dashboard
+from app.compat import _walk_cards, collect_entities, scan_dashboard
 from app.config import AppConfig
+from app.constants import _SW_SCRIPT
 from app.ha_client import HAClient
 from app.parser import parse_dashboard
 from app.renderer import _css_link, render_error, render_view, render_view_index
-from app.sse_manager import SSEManager, run_ha_websocket_forever
+from app.sse_manager import HAWebSocket, SSEManager
+from app.weather import ForecastCache, get_forecast, refresh_forecast
 
 logging.basicConfig(
     level=logging.INFO,
@@ -59,7 +62,16 @@ for _sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
 
 APP_DIR = Path(__file__).parent
 
-_SW_SCRIPT = '<script>if(navigator.serviceWorker){navigator.serviceWorker.getRegistrations().then(function(r){for(var i=0;i<r.length;i++){r[i].unregister()}})}</script>'
+_TPL_DIR = Path(__file__).resolve().parent / "templates"
+
+
+def _load_tpl(name: str) -> Template:
+    return Template((_TPL_DIR / name).read_text("utf-8"))
+
+
+_TPL_DASHBOARD_LIST = _load_tpl("dashboard_list.html")
+_TPL_CONFIG_PAGE = _load_tpl("config.html")
+_TPL_PREVIEW = _load_tpl("preview.html")
 
 
 async def _watch_dashboard_files(
@@ -170,9 +182,19 @@ async def lifespan(app: FastAPI):
 
     logger.info("Starting HA WebSocket listener for %s", config.ha_url)
     sse = SSEManager()
-    ws_task = asyncio.create_task(
-        run_ha_websocket_forever(config.ha_url, config.ha_token, sse)
+    forecast_cache = ForecastCache()
+
+    def _on_weather_change(entity_id: str) -> None:
+        ws = getattr(app.state, "ws_client", None)
+        if ws:
+            asyncio.create_task(
+                refresh_forecast(entity_id, ws, forecast_cache, sse)
+            )
+
+    ws_client = HAWebSocket(
+        config.ha_url, config.ha_token, sse, on_weather_change=_on_weather_change
     )
+    ws_task = ws_client.start()
 
     def _warn_ws_done(t: asyncio.Task):
         if not t.cancelled() and t.exception() is not None:
@@ -191,6 +213,8 @@ async def lifespan(app: FastAPI):
     app.state.dashboards = dashboards
     app.state.ha_client = ha_client
     app.state.sse = sse
+    app.state.forecast_cache = forecast_cache
+    app.state.ws_client = ws_client
     app.state.base_path = config.base_path
     app.state.public_port = config.public_port
 
@@ -222,12 +246,7 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass
 
-    ws_task.cancel()
-    try:
-        await ws_task
-    except asyncio.CancelledError:
-        pass
-
+    await ws_client.stop()
     await ha_client.disconnect()
     logger.info("Shutdown complete")
 
@@ -277,23 +296,12 @@ async def root():
         items = '<li class="empty">No dashboards yet. <a href="' + html.escape(f"{bp}/_config") + '">Add one</a>.</li>'
 
     return HTMLResponse(
-        '<!DOCTYPE html>'
-        '<html lang="en">'
-        '<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">'
-        '<title>LightDash</title>'
-        + _css_link()
-        + _SW_SCRIPT +
-        '</head>'
-        '<body>'
-        '<div class="view-index">'
-        '<h1>LightDash</h1>'
-        '<ul class="dashboard-list">'
-        + items +
-        '</ul>'
-        '<p class="config-link"><a href="' + html.escape(f"{bp}/_config") + '">&#x2699; Config</a></p>'
-        '</div>'
-        '</body>'
-        '</html>',
+        _TPL_DASHBOARD_LIST.substitute(
+            css_link=_css_link(),
+            sw_script=_SW_SCRIPT,
+            items=items,
+            config_url=html.escape(f"{bp}/_config"),
+        ),
         headers=_no_cache,
     )
 
@@ -360,12 +368,32 @@ async def dashboard_view(name: str, view_path: str):
             }
             entity_states = {s["entity_id"]: s for s in states}
 
+    forecast_data: dict = {}
+    matched_view = None
     for v in dashboard.views:
         if v.path == view_path:
-            return HTMLResponse(
-                render_view(v, dashboard, ha_url=ha_url, entity_icons=entity_icons, entity_states=entity_states, dashboard_name=name),
-                headers=_no_cache,
-            )
+            matched_view = v
+            break
+
+    if matched_view:
+        ws = getattr(app.state, "ws_client", None)
+        fc = getattr(app.state, "forecast_cache", None)
+        if ws and fc:
+            weather_entities: set = set()
+            for card in _walk_cards(matched_view):
+                if card.type == "weather-forecast":
+                    eid = card.get("entity", "")
+                    if eid:
+                        weather_entities.add(card.get("forecast_entity", "") or eid)
+            for eid in weather_entities:
+                flist = await get_forecast(eid, ws, fc, entity_states)
+                if flist:
+                    forecast_data[eid] = flist
+
+        return HTMLResponse(
+            render_view(matched_view, dashboard, ha_url=ha_url, entity_icons=entity_icons, entity_states=entity_states, dashboard_name=name, forecast_data=forecast_data),
+            headers=_no_cache,
+        )
 
     return HTMLResponse(
         render_error(f"View '{view_path}' not found in dashboard '{name}'."),
@@ -527,6 +555,53 @@ async def api_history(entity_id: str, hours: int = 24):
     return history or []
 
 
+@app.get("/api/weather-forecast/{dashboard}/{view_path:path}")
+async def weather_forecast_api(dashboard: str, view_path: str, entity: str = ""):
+    if not entity:
+        return HTMLResponse("", status_code=400)
+
+    dashboards = getattr(app.state, "dashboards", {})
+    d = dashboards.get(dashboard)
+    if not d:
+        return HTMLResponse("", status_code=404)
+
+    ws = getattr(app.state, "ws_client", None)
+    fc = getattr(app.state, "forecast_cache", None)
+
+    ha = getattr(app.state, "ha_client", None)
+    entity_states = {}
+    if ha and ha.is_connected:
+        states = await ha.get_states()
+        if states:
+            entity_states = {s["entity_id"]: s for s in states}
+
+    forecast_list = []
+    if ws and fc:
+        import app.weather as weather_mod
+        forecast_list = await weather_mod.get_forecast(entity, ws, fc, entity_states)
+
+    cfg = getattr(app.state, "config", None)
+    ha_url = cfg.ha_url if cfg else ""
+
+    import app.renderer as r
+    r._base_path = getattr(app.state, "base_path", "")
+    r._entity_states = entity_states
+    r._ha_url = ha_url
+    r._dashboard_name = dashboard
+    r._view_path = view_path
+    r._forecast_data = {entity: forecast_list}
+
+    for v in d.views:
+        if v.path == view_path:
+            for card in _walk_cards(v):
+                if card.type == "weather-forecast" and card.get("entity") == entity:
+                    html = r._render_weather_forecast(card)
+                    return HTMLResponse(html, headers=_no_cache)
+            break
+
+    return HTMLResponse("", status_code=404)
+
+
 @app.get("/api/view/{dashboard}/{view_path}/badge/{idx}")
 async def view_badge(dashboard: str, view_path: str, idx: int):
     dashboards = getattr(app.state, "dashboards", {})
@@ -594,436 +669,15 @@ async def config_page():
     public_base = cfg.public_base if cfg and cfg.public_base else ""
     css_link = _css_link()
 
-    return HTMLResponse(f"""\
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>LightDash Config</title>
-{css_link}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.css">
-<style>
-  #config-layout {{
-    display: grid;
-    grid-template-columns: 200px 1fr 1fr;
-    height: 100vh;
-    overflow: hidden;
-  }}
-  #sidebar {{
-    background: #181818;
-    border-right: 1px solid #2a2a2a;
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    overflow-y: auto;
-  }}
-  #sidebar h2 {{
-    font-size: 0.95rem;
-    color: #eee;
-    margin: 0;
-  }}
-  #sidebar ul {{
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    flex: 1;
-  }}
-  #sidebar li {{
-    padding: 6px 8px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    color: #ccc;
-  }}
-  #sidebar li:hover {{
-    background: #2a2a2a;
-  }}
-  #sidebar li.active {{
-    background: #1e3a5f;
-    color: #fff;
-  }}
-  #sidebar .btn {{
-    display: block;
-    width: 100%;
-    padding: 6px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    font-family: inherit;
-    text-align: center;
-  }}
-  #sidebar .btn-add {{
-    background: #1e3a5f;
-    color: #fff;
-  }}
-  #sidebar .btn-add:hover {{
-    background: #2a4a7f;
-  }}
-  #sidebar .btn-del {{
-    background: #3a1a1a;
-    color: #f88;
-    margin-top: 4px;
-  }}
-  #sidebar .btn-del:hover {{
-    background: #5a2a2a;
-  }}
-  #editor-pane {{
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }}
-  #editor-container {{
-    flex: 1;
-    overflow: hidden;
-    position: relative;
-  }}
-  #editor-container .CodeMirror {{
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    height: 100%;
-  }}
-  #editor-container .CodeMirror-scroll {{
-    overflow-y: auto;
-    overflow-x: auto;
-  }}
-  #fallback-editor {{
-    width: 100%;
-    height: 100%;
-    background: #1e1e1e;
-    color: #ddd;
-    border: none;
-    font-family: monospace;
-    padding: 8px;
-    resize: none;
-    display: none;
-  }}
-  #status-bar {{
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    background: #1a1a1a;
-    border-top: 1px solid #2a2a2a;
-    font-size: 0.8rem;
-  }}
-  #status-msg {{
-    flex: 1;
-    color: #888;
-  }}
-  #status-msg.error {{
-    color: #f88;
-  }}
-  #status-msg.ok {{
-    color: #8f8;
-  }}
-  #status-bar button {{
-    padding: 4px 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    font-family: inherit;
-  }}
-  #save-btn {{
-    background: #1e3a5f;
-    color: #fff;
-  }}
-  #save-btn:hover {{
-    background: #2a4a7f;
-  }}
-  #preview-btn {{
-    background: #2a2a2a;
-    color: #ccc;
-  }}
-  #preview-btn:hover {{
-    background: #3a3a3a;
-  }}
-  #rename-btn {{
-    background: #2a2a2a;
-    color: #ccc;
-    margin-top: 4px;
-  }}
-  #rename-btn:hover {{
-    background: #3a3a3a;
-  }}
-  #url-btn {{
-    background: #2a3a2a;
-    color: #8c8;
-  }}
-  #url-btn:hover {{
-    background: #3a4a3a;
-  }}
-  #preview-pane {{
-    border-left: 1px solid #2a2a2a;
-    background: #111;
-  }}
-  #preview-frame {{
-    width: 100%;
-    height: 100%;
-    border: none;
-  }}
-</style>
-{_SW_SCRIPT}
-</head>
-<body>
-<div id="config-layout">
-  <aside id="sidebar">
-    <h2>Dashboards</h2>
-    <ul id="dashboard-list"></ul>
-    <button class="btn btn-add" id="add-btn">+ Add Dashboard</button>
-    <button class="btn btn-del" id="del-btn" style="display:none">Delete</button>
-    <button class="btn btn-add" id="rename-btn" style="display:none">Rename</button>
-  </aside>
-  <main id="editor-pane">
-    <div id="editor-container"><textarea id="yaml-editor"></textarea></div>
-    <div id="status-bar">
-      <span id="status-msg">Select a dashboard to edit</span>
-      <button id="preview-btn">Preview</button>
-      <button id="url-btn">Public URL</button>
-      <button id="save-btn">Save</button>
-    </div>
-  </main>
-  <aside id="preview-pane">
-    <iframe id="preview-frame" srcdoc="<html><body style='background:#111;color:#555;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;font-size:1.2rem'>Preview</body></html>"></iframe>
-  </aside>
-</div>
-
-<script>
-const BASE="{bp}";
-const LIST_URL = BASE + "/_config/dashboards";
-const PREVIEW_URL = BASE + "/_config/preview";
-const PUBLIC_BASE="{public_base}";
-</script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5/mode/yaml/yaml.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5/addon/edit/closebrackets.js"></script>
-<script>
-(function() {{
-  let currentName = null;
-  let cm = null;
-  const ta = document.getElementById("yaml-editor");
-  const listEl = document.getElementById("dashboard-list");
-  const statusMsg = document.getElementById("status-msg");
-  const previewFrame = document.getElementById("preview-frame");
-  const delBtn = document.getElementById("del-btn");
-  const renameBtn = document.getElementById("rename-btn");
-
-  function setStatus(msg, type) {{
-    statusMsg.textContent = msg;
-    statusMsg.className = type || "";
-  }}
-
-  async function loadList() {{
-    try {{
-      const res = await fetch(LIST_URL);
-      const list = await res.json();
-      listEl.innerHTML = "";
-      for (const d of list) {{
-        const li = document.createElement("li");
-        li.textContent = d.name + (d.title ? " \\u2014 " + d.title : "");
-        li.dataset.name = d.name;
-        li.addEventListener("click", () => selectDashboard(d.name));
-        if (d.name === currentName) li.classList.add("active");
-        listEl.appendChild(li);
-      }}
-      if (list.length === 0) {{
-        delBtn.style.display = "none";
-        renameBtn.style.display = "none";
-      }}
-    }} catch(e) {{
-      setStatus("Failed to load dashboard list", "error");
-    }}
-  }}
-
-  async function selectDashboard(name) {{
-    currentName = name;
-    document.querySelectorAll("#dashboard-list li").forEach(li => li.classList.toggle("active", li.dataset.name === name));
-    delBtn.style.display = "";
-    renameBtn.style.display = "";
-    try {{
-      const res = await fetch(LIST_URL + "/" + encodeURIComponent(name) + ".yaml");
-      const text = await res.text();
-      if (cm) {{
-        cm.setValue(text);
-      }} else {{
-        ta.value = text;
-      }}
-      setStatus("Editing: " + name, "");
-      refreshPreview();
-    }} catch(e) {{
-      setStatus("Failed to load YAML", "error");
-    }}
-  }}
-
-  function getYaml() {{
-    return cm ? cm.getValue() : ta.value;
-  }}
-
-  async function saveDashboard() {{
-    if (!currentName) return;
-    const yaml = getYaml();
-    try {{
-      const res = await fetch(LIST_URL + "/" + encodeURIComponent(currentName), {{
-        method: "PUT",
-        headers: {{"Content-Type": "application/json"}},
-        body: JSON.stringify({{yaml}})
-      }});
-      if (res.ok) {{
-        setStatus("Saved", "ok");
-        refreshPreview();
-        loadList();
-      }} else {{
-        const err = await res.json();
-        setStatus(err.error || "Save failed", "error");
-      }}
-    }} catch(e) {{
-      setStatus("Save error: " + e.message, "error");
-    }}
-  }}
-
-  async function refreshPreview() {{
-    if (!currentName) return;
-    const yaml = getYaml();
-    try {{
-      const res = await fetch(PREVIEW_URL, {{
-        method: "POST",
-        headers: {{"Content-Type": "application/json"}},
-        body: JSON.stringify({{yaml}})
-      }});
-      if (res.ok) {{
-        const html = await res.text();
-        previewFrame.srcdoc = html;
-      }} else {{
-        const err = await res.json();
-        previewFrame.srcdoc = "<html><body style='background:#111;color:#f88;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;font-size:1.2rem'>" + (err.error || "Preview failed") + "</body></html>";
-      }}
-    }} catch(e) {{
-      previewFrame.srcdoc = "<html><body style='background:#111;color:#f88;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;font-size:1.2rem'>Preview error</body></html>";
-    }}
-  }}
-
-  async function addDashboard() {{
-    const name = prompt("Dashboard name (URL-safe, e.g. living-room):");
-    if (!name || !name.match(/^[a-zA-Z0-9_-]+$/)) {{
-      if (name) setStatus("Invalid name. Use letters, numbers, hyphens, underscores.", "error");
-      return;
-    }}
-    try {{
-      const res = await fetch(LIST_URL, {{
-        method: "POST",
-        headers: {{"Content-Type": "application/json"}},
-        body: JSON.stringify({{name}})
-      }});
-      if (res.ok) {{
-        await loadList();
-        await selectDashboard(name);
-        setStatus("Created: " + name, "ok");
-      }} else {{
-        const err = await res.json();
-        setStatus(err.error || "Create failed", "error");
-      }}
-    }} catch(e) {{
-      setStatus("Create error: " + e.message, "error");
-    }}
-  }}
-
-  async function deleteDashboard() {{
-    if (!currentName || !confirm('Delete "' + currentName + '"?')) return;
-    try {{
-      const res = await fetch(LIST_URL + "/" + encodeURIComponent(currentName), {{
-        method: "DELETE"
-      }});
-      if (res.ok) {{
-        currentName = null;
-        if (cm) cm.setValue(""); else ta.value = "";
-        previewFrame.srcdoc = "<html><body style='background:#111;color:#555;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;font-size:1.2rem'>Preview</body></html>";
-        delBtn.style.display = "none";
-        renameBtn.style.display = "none";
-        setStatus("Deleted", "ok");
-        await loadList();
-      }} else {{
-        const err = await res.json();
-        setStatus(err.error || "Delete failed", "error");
-      }}
-    }} catch(e) {{
-      setStatus("Delete error: " + e.message, "error");
-    }}
-  }}
-
-  async function renameDashboard() {{
-    if (!currentName) return;
-    const newName = prompt('New name for "' + currentName + '" (URL-safe):', currentName);
-    if (!newName || newName === currentName) return;
-    if (!newName.match(/^[a-zA-Z0-9_-]+$/)) {{
-      setStatus("Invalid name. Use letters, numbers, hyphens, underscores.", "error");
-      return;
-    }}
-    try {{
-      const res = await fetch(LIST_URL + "/" + encodeURIComponent(currentName) + "/rename", {{
-        method: "PUT",
-        headers: {{"Content-Type": "application/json"}},
-        body: JSON.stringify({{new_name: newName}})
-      }});
-      if (res.ok) {{
-        currentName = newName;
-        await loadList();
-        setStatus("Renamed to: " + newName, "ok");
-      }} else {{
-        const err = await res.json();
-        setStatus(err.error || "Rename failed", "error");
-      }}
-    }} catch(e) {{
-      setStatus("Rename error: " + e.message, "error");
-    }}
-  }}
-
-  try {{
-    cm = CodeMirror.fromTextArea(ta, {{
-      mode: "yaml",
-      theme: "default",
-      lineNumbers: true,
-      indentUnit: 4,
-      tabSize: 4,
-      indentWithTabs: false,
-      lineWrapping: true,
-      autoCloseBrackets: true,
-      extraKeys: {{"Ctrl-S": () => saveDashboard()}}
-    }});
-    cm.on("beforeChange", function(cm2, change) {{
-      if (change.origin === "paste") {{
-        for (var i = 0; i < change.text.length; i++) {{
-          change.text[i] = change.text[i].replace(/\t/g, "    ");
-        }}
-      }}
-    }});
-  }} catch(e) {{
-    cm = null;
-    ta.style.display = "";
-  }}
-
-  document.getElementById("add-btn").addEventListener("click", addDashboard);
-  document.getElementById("del-btn").addEventListener("click", deleteDashboard);
-  document.getElementById("rename-btn").addEventListener("click", renameDashboard);
-  document.getElementById("save-btn").addEventListener("click", saveDashboard);
-  document.getElementById("preview-btn").addEventListener("click", refreshPreview);
-  document.getElementById("url-btn").addEventListener("click", function(){{
-    if(!currentName){{setStatus("Select a dashboard first","error");return}}
-    var url = (PUBLIC_BASE || window.location.origin + BASE) + "/d/" + encodeURIComponent(currentName);
-    navigator.clipboard.writeText(url).then(function(){{
-      setStatus("Copied: " + url, "ok");
-    }}).catch(function(){{
-      setStatus("Failed to copy URL", "error");
-    }});
-  }});
-
-  loadList();
-}})();
-</script>
-</body>
-</html>""", headers=_no_cache)
+    return HTMLResponse(
+        _TPL_CONFIG_PAGE.substitute(
+            css_link=css_link,
+            sw_script=_SW_SCRIPT,
+            bp=bp,
+            public_base=public_base,
+        ),
+        headers=_no_cache,
+    )
 
 
 @app.get("/_config/dashboards")
@@ -1223,12 +877,11 @@ async def config_preview(req: Request):
     top_bar = f'<div style="display:flex;gap:8px;padding:6px 12px;background:#1a1a1a;border-bottom:1px solid #2a2a2a;font-size:0.85rem">{pages}</div>'
 
     return HTMLResponse(
-        '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width,initial-scale=1.0">\n<title>Preview</title>\n'
-        + _css_link(dashboard.lightdash.theme)
-        + _SW_SCRIPT + '\n'
-        + '</head>\n<body>\n'
-        + top_bar +
-        html_out +
-        '</body>\n</html>',
+        _TPL_PREVIEW.substitute(
+            css_link=_css_link(dashboard.lightdash.theme),
+            sw_script=_SW_SCRIPT,
+            top_bar=top_bar,
+            html_out=html_out,
+        ),
         headers=_no_cache,
     )

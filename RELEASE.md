@@ -1,3 +1,21 @@
+# Release Notes for v0.16.1 (2026-06-10)
+
+Weather forecast cards are now powered by the Home Assistant WebSocket API, bringing live forecast data to your dashboards with automatic background refreshes and a handful of stability fixes.
+
+- **Live weather forecast via WebSocket:** Weather-forecast cards now fetch forecast data directly from Home Assistant's `weather.get_forecasts` service using the WebSocket API, instead of relying on entity attributes. This means forecast data is always fresh and works with all weather integrations — no more empty forecast sections.
+- **Lazy-loaded forecasts:** On page load, the current weather appears instantly while the forecast section loads in the background. No delay in seeing the current conditions.
+- **Auto-refreshing forecast cards:** When the weather entity updates (e.g. new forecast data arrives), the card re-renders itself automatically. No page refresh needed.
+- **30-minute forecast cache:** Forecast data is cached for 30 minutes so repeated page loads or multi-dashboard setups don't hammer the WebSocket API. Cache is invalidated automatically on weather entity state changes.
+- **Smart fallback:** If the WebSocket call fails or the addon is offline, the card falls back to reading forecast data from the entity's `attributes.forecast` — existing dashboards keep working with no config changes.
+- **Forecast polling loop fixed:** The weather forecast card no longer re-fetches forecast data in an infinite loop. On the initial page load, the forecast fetches once in the background, then stays stable until a weather state change triggers a refresh.
+- **Long-press dimmer crash fixed:** Opening a dashboard with any light tile or light entity row no longer crashes the server with a `KeyError`. The dimmer popup now works as expected.
+- **Cover popup crash fixed:** The long-press cover position modal no longer crashes with a `KeyError` when auto-close is enabled.
+- **Full-page swap on state update fixed:** When an entity (like a cover) changes state, the live update no longer replaces the entire page body with just the state string (e.g. "open" or "opening").
+- **Internal rendering engine refactored:** The HTML and JavaScript that makes up every page is now kept in separate template files instead of being built with inline Python string concatenation. You won't notice any difference as a user — response times are unchanged — but future development will be much faster and less error-prone.
+- **Clock updates moved to a shared script:** The JavaScript that updates the clock on-screen is now loaded from a static file rather than inserted into every page, making pages slightly smaller and clock behaviour easier to tweak.
+
+---
+
 # Release Notes for v0.14.0 (2026-06-06)
 
 Badges add compact context-aware controls to the top of any view — entity state at a glance, quick navigation, and conditional pills that appear and disappear based on what's happening in your home.
