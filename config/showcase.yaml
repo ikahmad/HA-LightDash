@@ -1,8 +1,8 @@
 title: LightDash Showcase
 lightdash:
-  container_width: 960px
-  container_height: 480px
-  theme: ha-dark
+  container_width: 650px
+  container_height: 650px
+  theme: glass
 views:
   - type: sections
     max_columns: 12
@@ -32,6 +32,15 @@ views:
     sections:
       - type: grid
         cards:
+          - type: tile
+            entity: light.porch
+            show_entity_picture: false
+            hide_state: true
+            vertical: true
+            features_position: bottom
+            color: yellow
+            grid_options:
+              columns: 3
           - type: clock
             clock_style: digital
             clock_size: fit 50%
@@ -43,25 +52,6 @@ views:
               date_show: true
               date_format: default
               date_fontsize: fit 50%
-            grid_options:
-              columns: 12
-              rows: 1
-          - type: tile
-            entity: light.porch
-            show_entity_picture: false
-            hide_state: true
-            vertical: true
-            features_position: bottom
-            color: yellow
-            grid_options:
-              columns: 3
-          - type: tile
-            entity: light.entryway
-            show_entity_picture: false
-            hide_state: true
-            vertical: true
-            features_position: bottom
-            color: orange
             grid_options:
               columns: 3
           - type: tile
@@ -75,6 +65,7 @@ views:
             features_position: inline
             grid_options:
               columns: 6
+              rows: auto
           - type: entities
             entities:
               - entity: light.dining_room
@@ -85,24 +76,26 @@ views:
                 name: Workshop
             show_header_toggle: false
             grid_options:
-              columns: 6
+              columns: 3
               rows: auto
-          - type: entities
+          - type: custom:today-card
+            title: "Today\u2019s Schedule"
+            advance: 0
+            show_all_day_events: true
+            show_past_events: true
+            fallback_color: primary
+            height: 238
             entities:
-              - entity: light.living_room_pendant_light
-                name: Pendant
-              - entity: light.living_room_cabinets
-                name: Cabinets
-                secondary_info: none
-              - entity: light.living_room_floor_lamp
-                name: Floor lamp
-              - entity: light.coffee_bar_light_strip
-                name: Coffee Bar
-                secondary_info: none
-            show_header_toggle: false
+              - entity: calendar.personal
+                color: "#03a9f4"
+              - entity: calendar.family
+                color: pink
+            tap_action:
+              action: navigate
+              navigation_path: agenda
             grid_options:
-              columns: 6
-              rows: auto
+              columns: 3
+              rows: 1
   - type: sections
     max_columns: 12
     title: Controls

@@ -28,6 +28,8 @@ from app.ha_client import HAClient
 from app.parser import parse_dashboard
 from app.renderer import _css_link, render_error, render_view, render_view_index
 from app.sse_manager import HAWebSocket, SSEManager
+from app.calendar_events import CalendarCache, get_dummy_events
+from app.calendar_events import get_events as get_calendar_events
 from app.weather import ForecastCache, get_forecast, refresh_forecast
 
 logging.basicConfig(
@@ -183,6 +185,7 @@ async def lifespan(app: FastAPI):
     logger.info("Starting HA WebSocket listener for %s", config.ha_url)
     sse = SSEManager()
     forecast_cache = ForecastCache()
+    calendar_cache = CalendarCache()
 
     def _on_weather_change(entity_id: str) -> None:
         ws = getattr(app.state, "ws_client", None)
@@ -214,6 +217,7 @@ async def lifespan(app: FastAPI):
     app.state.ha_client = ha_client
     app.state.sse = sse
     app.state.forecast_cache = forecast_cache
+    app.state.calendar_cache = calendar_cache
     app.state.ws_client = ws_client
     app.state.base_path = config.base_path
     app.state.public_port = config.public_port
@@ -339,8 +343,17 @@ async def dashboard_view(name: str, view_path: str):
         entity_states = preview.get("entity_states", {})
         for v in dashboard.views:
             if v.path == view_path:
+                from datetime import datetime as _dt2
+                _ref_date = _dt2.now().astimezone().date()
+                calendar_data: dict = {}
+                for card in _walk_cards(v):
+                    if card.type == "today":
+                        for ent in (card.get("entities") or []):
+                            eid = ent.get("entity", "") if isinstance(ent, dict) else ent
+                            if eid:
+                                calendar_data[eid] = get_dummy_events(_ref_date)
                 return HTMLResponse(
-                    render_view(v, dashboard, ha_url=ha_url, entity_icons=entity_icons, entity_states=entity_states, dashboard_name="_preview"),
+                    render_view(v, dashboard, ha_url=ha_url, entity_icons=entity_icons, entity_states=entity_states, dashboard_name="_preview", calendar_data=calendar_data),
                     headers=_no_cache,
                 )
         return HTMLResponse(render_error(f"View '{view_path}' not found"), status_code=404, headers=_no_cache)
@@ -390,8 +403,35 @@ async def dashboard_view(name: str, view_path: str):
                 if flist:
                     forecast_data[eid] = flist
 
+        cc = getattr(app.state, "calendar_cache", None)
+        ha = getattr(app.state, "ha_client", None)
+        calendar_data: dict = {}
+        if cc and ha and ha.is_connected:
+            cal_entities: set = set()
+            for card in _walk_cards(matched_view):
+                if card.type == "today":
+                    for ent in (card.get("entities") or []):
+                        eid = ent.get("entity", "") if isinstance(ent, dict) else ent
+                        if eid:
+                            cal_entities.add(eid)
+            for eid in cal_entities:
+                events = await get_calendar_events(eid, ha, cc)
+                if events:
+                    calendar_data[eid] = events
+
+        # dummy data for preview when no real calendar data available
+        if not calendar_data:
+            from datetime import datetime as _dt2
+            _ref_date = _dt2.now().astimezone().date()
+            for card in _walk_cards(matched_view):
+                if card.type == "today":
+                    for ent in (card.get("entities") or []):
+                        eid = ent.get("entity", "") if isinstance(ent, dict) else ent
+                        if eid and eid not in calendar_data:
+                            calendar_data[eid] = get_dummy_events(_ref_date)
+
         return HTMLResponse(
-            render_view(matched_view, dashboard, ha_url=ha_url, entity_icons=entity_icons, entity_states=entity_states, dashboard_name=name, forecast_data=forecast_data),
+            render_view(matched_view, dashboard, ha_url=ha_url, entity_icons=entity_icons, entity_states=entity_states, dashboard_name=name, forecast_data=forecast_data, calendar_data=calendar_data),
             headers=_no_cache,
         )
 
@@ -868,7 +908,16 @@ async def config_preview(req: Request):
     }
 
     view = dashboard.views[0]
-    html_out = render_view(view, dashboard, ha_url=ha_url, entity_icons=entity_icons, entity_states=entity_states, dashboard_name="_preview")
+    from datetime import datetime as _dt2
+    _ref_date = _dt2.now().astimezone().date()
+    calendar_data: dict = {}
+    for card in _walk_cards(view):
+        if card.type == "today":
+            for ent in (card.get("entities") or []):
+                eid = ent.get("entity", "") if isinstance(ent, dict) else ent
+                if eid:
+                    calendar_data[eid] = get_dummy_events(_ref_date)
+    html_out = render_view(view, dashboard, ha_url=ha_url, entity_icons=entity_icons, entity_states=entity_states, dashboard_name="_preview", calendar_data=calendar_data)
 
     pages = ''.join(
         f'<a href="{bp}/d/_preview/view/{html.escape(v.path)}" class="{"active" if v is view else ""}">{html.escape(v.title or v.path)}</a>'
