@@ -524,6 +524,65 @@ items, scroll for more).
 
 ![Weather](https://github.com/richkershaw/HA-LightDash/raw/main/example-images/example-weather.png)
 
+### today-card
+
+Lightweight day-agenda card showing events from one or more `calendar.*`
+entities. Each calendar gets its own accent colour; events are marked as
+past, current (with a "Now" pill), future, all-day, or multi-day.
+
+```yaml
+type: custom:today-card
+title: "Today's Schedule"    # optional, omit to hide the header
+advance: 0                   # optional, shift view by N days (1 = tomorrow)
+show_all_day_events: true    # optional, default true
+show_past_events: false      # optional, default false
+limit: 0                     # optional, max events to show (0 = unlimited)
+time_format: "HH:mm"         # optional, tokens: H HH h hh m mm A a
+fallback_color: primary      # optional, HA colour name or hex for uncoloured calendars
+height: 0                    # optional, fixed card height in px (0 = auto)
+entities:
+  - entity: calendar.work
+    color: "#03a9f4"         # optional, hex or HA named colour
+  - entity: calendar.family
+    color: pink
+tap_action:
+  action: navigate
+  navigation_path: agenda
+```
+
+| Config | Description |
+|--------|-------------|
+| `title` | Card header title. Omit to hide the header entirely. |
+| `advance` | Shift the view forward (positive) or backward (negative) by N days. `0` = today. |
+| `show_all_day_events` | Whether to include all-day events in the list. |
+| `show_past_events` | Whether to include events that have already ended. |
+| `limit` | Maximum number of events to display. `0` = show all matching events. |
+| `time_format` | Time token format for event start/end times. Tokens: `HH` (00-23), `H` (0-23), `hh` (01-12), `h` (1-12), `mm` (00-59), `m` (0-59), `A` (AM/PM), `a` (am/pm). |
+| `fallback_color` | Colour applied to calendars that don't specify their own `color`. Accepts any HA named colour (`primary`, `red`, `pink`, `green`, etc.) or a hex string. Defaults to cycling through an auto-palette. |
+| `height` | Fixed card height in pixels. When set, the event list scrolls inside the card. `0` = auto-height (card grows with content). |
+| `entities` | List of calendar entities. Each entry can be a bare entity ID string or an object with `entity` and optional `color`. |
+| `color` | Per-calendar accent colour: hex string or HA named colour (e.g. `pink`, `amber`, `teal`, `indigo`). |
+
+Colour mapping — any HA named colour is accepted as `color` or `fallback_color`:
+
+| Name | Hex | Name | Hex | Name | Hex |
+|------|-----|------|-----|------|-----|
+| `primary` | `#03a9f4` | `red` | `#f44336` | `pink` | `#e91e63` |
+| `purple` | `#926bc7` | `indigo` | `#3f51b5` | `blue` | `#2196f3` |
+| `cyan` | `#00bcd4` | `teal` | `#009688` | `green` | `#4caf50` |
+| `lime` | `#cddc39` | `yellow` | `#ffeb3b` | `orange` | `#ff9800` |
+| `brown` | `#795548` | `grey` | `#9e9e9e` | `black` | `#000000` |
+
+When no `color` and no `fallback_color` are set, calendars cycle through an
+auto-palette: `#03a9f4`, `#e91e63`, `#009688`, `#ff9800`, `#926bc7`,
+`#4caf50`, `#3f51b5`, `#00bcd4`.
+
+The card respects `advance` for looking ahead or behind, and `limit` for
+capping the number of visible events.
+
+![Agenda](https://github.com/richkershaw/HA-LightDash/raw/main/example-images/example-agenda.png)
+
+
 ### placeholder
 
 Rendered when a card type is unknown. Displays a `?` placeholder.

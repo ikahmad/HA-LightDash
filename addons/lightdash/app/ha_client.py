@@ -124,3 +124,21 @@ class HAClient:
         except Exception as e:
             logger.warning("History fetch error: %s", e)
             return None
+
+    async def get_calendar_events(
+        self, entity_id: str, start: str, end: str
+    ) -> Optional[List]:
+        if not self._connected:
+            return None
+        try:
+            params = {"start": start, "end": end}
+            r = await self._http.get(f"/api/calendars/{entity_id}", params=params)
+            if r.is_success:
+                return r.json()
+            logger.warning(
+                "Calendar fetch failed for %s: HTTP %d", entity_id, r.status_code
+            )
+            return None
+        except Exception as e:
+            logger.warning("Calendar fetch error for %s: %s", entity_id, e)
+            return None

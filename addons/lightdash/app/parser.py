@@ -210,8 +210,45 @@ def _map_mushroom_number(config: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
     return "tile", new
 
 
+def _map_today_card(config: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+    new: Dict[str, Any] = {
+        "title": config.get("title", ""),
+        "advance": config.get("advance", 0),
+        "show_all_day_events": config.get("show_all_day_events", True),
+        "show_past_events": config.get("show_past_events", False),
+        "limit": config.get("limit", 0),
+        "time_format": config.get("time_format", "HH:mm"),
+        "fallback_color": config.get("fallback_color", ""),
+        "height": config.get("height", 0),
+        "grid_options": config.get("grid_options", {}),
+    }
+
+    entities: List[Dict[str, Any]] = []
+    for ent in config.get("entities", []) or []:
+        if isinstance(ent, str) and ent:
+            entities.append({"entity": ent})
+        elif isinstance(ent, dict) and ent.get("entity"):
+            item: Dict[str, Any] = {"entity": ent["entity"]}
+            if ent.get("color"):
+                item["color"] = ent["color"]
+            entities.append(item)
+    new["entities"] = entities
+
+    tap = config.get("tap_action")
+    if isinstance(tap, dict):
+        tap = dict(tap)
+        if tap.get("action") == "perform-action":
+            tap["action"] = "call-service"
+            if "perform_action" in tap and "service" not in tap:
+                tap["service"] = tap.pop("perform_action")
+        new["tap_action"] = tap
+
+    return "today", new
+
+
 _CUSTOM_CARD_MAP: Dict[str, Any] = {
     "custom:mushroom-light-card": _map_mushroom_light,
     "custom:mushroom-cover-card": _map_mushroom_cover,
     "custom:mushroom-number-card": _map_mushroom_number,
+    "custom:today-card": _map_today_card,
 }

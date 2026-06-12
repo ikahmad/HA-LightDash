@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.17.0 (2026-06-12)
+- **Added:** `custom:today-card` card type — lightweight day-agenda card for `calendar.*` entities with past/current/future/all-day/multi-day event states, per-calendar colors, auto-palette fallback, configurable advance offset, time format, event limit, and `fallback_color`.
+- **Added:** `app/calendar_events.py` — `CalendarCache` (TTL 300s), `get_events()` to fetch events from HA REST API, and `get_dummy_events()` for offline/preview fallback with realistic sample data.
+- **Added:** `HAClient.get_calendar_events()` — calls `GET /api/calendars/{entity_id}` with start/end params.
+- **Added:** Calendar data wiring in `main.py` — `CalendarCache` in lifespan, calendar entity discovery and fetch in `dashboard_view()`, dummy data injection when HA is offline or no real data exists.
+- **Added:** `height` config option on `custom:today-card` — integer pixels (default 0 = auto). When set, card is fixed height with scrollable event list.
+- **Added:** Showcase YAML — Agenda view with `custom:today-card`, badge shortcut to navigate to it.
+- **Fixed:** `_map_today_card` now preserves `grid_options` from YAML config so the card respects grid column spans.
+- **Fixed:** Preview mode (`_preview`) and config preview now generate dummy calendar data so the today-card renders events without a live HA connection.
+
 ## v0.16.2 (2026-06-10)
 - **Fixed:** Config page 500 error — escaped bare `$` in JS regex `/^[a-zA-Z0-9_-]+$/` patterns within `config.html` `string.Template` to prevent `ValueError: Invalid placeholder`.
 

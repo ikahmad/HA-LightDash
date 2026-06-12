@@ -1,3 +1,13 @@
+# Release Notes for v0.17.0 (2026-06-12)
+
+Adds a compact agenda card that shows what's on your calendars today — and several data-fetching improvements that lay the groundwork for richer cards in future releases.
+
+- **New card type: `custom:today-card`:** Shows a day-by-day agenda from one or more Home Assistant `calendar.*` entities. Each event is colour-coded by calendar (configured per-entity or auto-assigned), with visual states for current ("Now" pill), past (dimmed), future, all-day (hatched indicator), and multi-day events (with day count like "1/3").
+- **Works offline or in preview mode:** If the addon can't reach Home Assistant, or if your calendar entities don't exist yet, the card renders with realistic dummy events so you can see exactly how it will look when live — no config changes needed.
+- **Optional height control:** Add `height: 300` to fix the card height with scrolling for excess events. Defaults to auto-height when omitted.
+- **Grid column fix for custom cards:** Custom cards like `custom:today-card` now correctly respect `grid_options.columns` from your YAML config, so they sit at the right width in multi-column grid sections.
+- **Internal:** New calendar data cache with 5-minute TTL, `CalendarCache` and `get_events()` fetch module, and dummy data generator for reliable previews.
+
 # Release Notes for v0.16.2 (2026-06-10)
 
 One more stability fix for the config page.

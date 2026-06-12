@@ -11,6 +11,8 @@ from pathlib import Path
 from string import Template
 from typing import Any, Dict, List, Optional, Tuple
 
+import datetime as _today_dt
+
 from app.compat import JINJA_RE
 from app.constants import _SW_SCRIPT
 from app.models import Action, Card, Dashboard, Section, View
@@ -70,6 +72,7 @@ _dashboard_name: str = ""
 _view_path: str = ""
 _base_path: str = ""
 _forecast_data: Dict[str, list] = {}
+_calendar_data: Dict[str, list] = {}
 _via_ingress = contextvars.ContextVar("renderer_via_ingress", default=False)
 _icon_svg_cache: Dict[str, str] = OrderedDict()
 _ICON_CACHE_MAX = 200
@@ -106,14 +109,15 @@ def register(type_name: str):
     return decorator
 
 
-def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons: Optional[dict] = None, entity_states: Optional[dict] = None, dashboard_name: str = "", forecast_data: Optional[dict] = None) -> str:
-    global _entity_icons, _entity_states, _ha_url, _dashboard_name, _view_path, _forecast_data
+def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons: Optional[dict] = None, entity_states: Optional[dict] = None, dashboard_name: str = "", forecast_data: Optional[dict] = None, calendar_data: Optional[dict] = None) -> str:
+    global _entity_icons, _entity_states, _ha_url, _dashboard_name, _view_path, _forecast_data, _calendar_data
     _entity_icons = entity_icons or {}
     _entity_states = entity_states or {}
     _ha_url = ha_url or ""
     _dashboard_name = dashboard_name or ""
     _view_path = view.path
     _forecast_data = forecast_data or {}
+    _calendar_data = calendar_data or {}
 
     _prefetch_icons(view)
 
@@ -1699,3 +1703,213 @@ def _inline_md(text: str) -> str:
     text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
     text = re.sub(r"\[(.+?)\]\((.+?)\)", r'<a href="\2" target="_blank">\1</a>', text)
     return text
+
+
+# ---------------------------------------------------------------------------
+#  today-card  (custom:today-card)
+# ---------------------------------------------------------------------------
+
+_HA_COLORS: Dict[str, str] = {
+    "primary": "#03a9f4", "dark-primary": "#0288d1", "light-primary": "#b3e5fc",
+    "accent": "#ff9800", "disabled": "#bdbdbd",
+    "red": "#f44336", "pink": "#e91e63", "purple": "#926bc7", "deep-purple": "#6e41ab",
+    "indigo": "#3f51b5", "blue": "#2196f3", "light-blue": "#03a9f4", "cyan": "#00bcd4",
+    "teal": "#009688", "green": "#4caf50", "light-green": "#8bc34a", "lime": "#cddc39",
+    "yellow": "#ffeb3b", "amber": "#ffc107", "orange": "#ff9800", "deep-orange": "#ff6f22",
+    "brown": "#795548", "light-grey": "#bdbdbd", "grey": "#9e9e9e", "dark-grey": "#606060",
+    "blue-grey": "#607d8b", "black": "#000000", "white": "#ffffff",
+}
+
+_TODAY_AUTO_COLORS = [
+    "#03a9f4", "#e91e63", "#009688", "#ff9800",
+    "#926bc7", "#4caf50", "#3f51b5", "#00bcd4",
+]
+
+_TODAY_CAL_ICON = (
+    '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">'
+    '<path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 '
+    '2-2V6a2 2 0 0 0-2-2m0 16H5V10h14zm0-12H5V6h14z"/></svg>'
+)
+
+
+def _today_color(name: str) -> str:
+    if not name:
+        return ""
+    if name.startswith("#"):
+        return name
+    return _HA_COLORS.get(name.lower(), name)
+
+
+def _fmt_event_time(dt: "_today_dt.datetime", fmt: str) -> str:
+    h24 = dt.hour
+    h12 = h24 % 12 or 12
+    tokens = [
+        ("HH", f"{h24:02d}"), ("H", str(h24)),
+        ("hh", f"{h12:02d}"), ("h", str(h12)),
+        ("mm", f"{dt.minute:02d}"), ("m", str(dt.minute)),
+        ("A", "AM" if h24 < 12 else "PM"), ("a", "am" if h24 < 12 else "pm"),
+    ]
+    out = ""
+    i = 0
+    while i < len(fmt):
+        for tok, val in tokens:
+            if fmt.startswith(tok, i):
+                out += val
+                i += len(tok)
+                break
+        else:
+            out += fmt[i]
+            i += 1
+    return out
+
+
+@register("today")
+def _render_today_card(card: Card, indent: int = 2) -> str:
+    cfg_entities = card.get("entities", []) or []
+    title = card.get("title", "") or ""
+    advance = int(card.get("advance", 0) or 0)
+    show_all_day = card.get("show_all_day_events", True)
+    show_past = card.get("show_past_events", False)
+    limit = int(card.get("limit", 0) or 0)
+    time_format = card.get("time_format", "HH:mm") or "HH:mm"
+    fallback_color = _today_color(card.get("fallback_color", ""))
+    card_height = int(card.get("height", 0) or 0)
+
+    now = _today_dt.datetime.now().astimezone()
+    today = now.date()
+    target_date = (now + _today_dt.timedelta(days=advance)).date()
+
+    collected: list = []
+    auto_i = 0
+    for ent in cfg_entities:
+        if isinstance(ent, str):
+            eid, color = ent, ""
+        elif isinstance(ent, dict):
+            eid, color = ent.get("entity", ""), _today_color(ent.get("color", ""))
+        else:
+            continue
+        if not eid:
+            continue
+        if not color:
+            if fallback_color:
+                color = fallback_color
+            else:
+                color = _TODAY_AUTO_COLORS[auto_i % len(_TODAY_AUTO_COLORS)]
+                auto_i += 1
+        for ev in _calendar_data.get(eid, []):
+            collected.append((ev, color))
+
+    vms: list = []
+    for ev, color in collected:
+        start = ev.get("start")
+        end = ev.get("end")
+        if start is None or end is None:
+            continue
+        all_day = bool(ev.get("all_day", False))
+        s_date = start.date()
+        e_date = (end - _today_dt.timedelta(seconds=1)).date() if end > start else end.date()
+        if not (s_date <= target_date <= e_date):
+            continue
+        if all_day and not show_all_day:
+            continue
+
+        classes = ["today-event"]
+        is_current = is_past = is_future = False
+
+        if all_day:
+            classes.append("is-all-day")
+            if target_date < today:
+                is_past = True
+            elif target_date > today:
+                is_future = True
+        else:
+            if start <= now < end:
+                is_current = True
+            elif end <= now:
+                is_past = True
+            else:
+                is_future = True
+
+        if is_past and not show_past:
+            continue
+        if is_current:
+            classes.append("is-current")
+        elif is_past:
+            classes.append("is-in-past")
+        elif is_future:
+            classes.append("is-in-future")
+
+        count = ""
+        if e_date > s_date:
+            classes.append("is-multi-day")
+            total = (e_date - s_date).days + 1
+            day_idx = (target_date - s_date).days + 1
+            if target_date == s_date:
+                classes.append("is-first-day")
+            if target_date == e_date:
+                classes.append("is-last-day")
+            count = f"({day_idx}/{total})"
+
+        if all_day or e_date > s_date:
+            sched = "All day"
+        else:
+            sched = _fmt_event_time(start, time_format) + " \u2013 " + _fmt_event_time(end, time_format)
+
+        vms.append({
+            "classes": classes,
+            "color": color,
+            "summary": ev.get("summary", "") or "(busy)",
+            "sched": sched,
+            "count": count,
+            "is_current": is_current,
+            "sort": (0 if all_day else 1, start),
+        })
+
+    vms.sort(key=lambda v: v["sort"])
+    if limit > 0:
+        vms = vms[:limit]
+
+    header_html = ""
+    if title:
+        date_label = html.escape(target_date.strftime("%a %d %b").lstrip("0"))
+        header_html = (
+            _SP * (indent + 1) + '<div class="today-header">\n'
+            + _SP * (indent + 2) + '<span class="today-header-icon">' + _TODAY_CAL_ICON + '</span>\n'
+            + _SP * (indent + 2) + '<span class="today-title">' + html.escape(title) + '</span>\n'
+            + _SP * (indent + 2) + '<span class="today-header-date">' + date_label + '</span>\n'
+            + _SP * (indent + 1) + '</div>\n'
+        )
+
+    rows = ""
+    for v in vms:
+        cls = " ".join(v["classes"])
+        count_html = (' <span class="today-event-count">' + html.escape(v["count"]) + '</span>') if v["count"] else ""
+        now_html = ('\n' + _SP * (indent + 2) + '<span class="today-now">Now</span>') if v["is_current"] else ""
+        rows += (
+            _SP * (indent + 1) + '<div class="' + cls + '" style="--ev-color:' + html.escape(v["color"]) + '">\n'
+            + _SP * (indent + 2) + '<div class="today-indicator"></div>\n'
+            + _SP * (indent + 2) + '<div class="today-details">\n'
+            + _SP * (indent + 3) + '<p class="today-event-title"><strong>' + html.escape(v["summary"]) + '</strong>' + count_html + '</p>\n'
+            + _SP * (indent + 3) + '<p class="today-schedule">' + html.escape(v["sched"]) + '</p>\n'
+            + _SP * (indent + 2) + '</div>'
+            + now_html + '\n'
+            + _SP * (indent + 1) + '</div>\n'
+        )
+    if not rows:
+        rows = _SP * (indent + 1) + '<div class="today-empty">Nothing left on the calendar today</div>\n'
+
+    list_style = ""
+    if card_height > 0:
+        list_style = ' style="overflow-y: auto"'
+    list_html = _SP * (indent + 1) + '<div class="today-list"' + list_style + '>\n' + rows + _SP * (indent + 1) + '</div>\n'
+
+    attrs: Dict[str, str] = {"class": "ha-card today-card"}
+    if card_height > 0:
+        attrs["style"] = f"height: {card_height}px;"
+    ta = _tap_action_attrs(card)
+    if ta:
+        attrs["class"] += " is-tappable"
+        attrs.update(ta)
+
+    content = "\n" + header_html + list_html + _SP * indent
+    return _h("div", attrs, content, indent)
