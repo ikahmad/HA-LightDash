@@ -141,6 +141,17 @@ views:
             round_temperature: true
             grid_options:
               columns: 12
+          - type: alarm-panel
+            entity: alarm_control_panel.alarmo
+            name: Home Alarm
+            show_keypad: true
+            states:
+              armed_home:
+                button_label: "Stay"
+              armed_night:
+                button_label: "Sleep"
+            grid_options:
+              columns: 12
   - type: sections
     max_columns: 12
     title: Weather
