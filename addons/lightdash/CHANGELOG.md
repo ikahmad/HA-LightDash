@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.19.0 (2026-06-28)
+- **Added:** `alarm-panel` card type — full-featured alarm control panel for Alarmo integration. Displays state badge (icon+color+label per state), arm/disarm action buttons, numeric keypad for code entry, arming options (skip exit delay, bypass open sensors), and diagnostic messages (triggered sensors, blocking sensors, bypassed sensors).
+- **Added:** `_render_alarm_panel` renderer function in `app/renderer.py` — registered as `alarm-panel` card type with state-aware rendering, configurable state labels/colors/button icons/button order via `states` config key.
+- **Added:** `POST /api/alarm-action/{dashboard}/{view_path}` endpoint — accepts `entity_id`, `action` (arm mode or disarm), `code`, `skip_delay`, `force`; calls `alarmo.arm` / `alarmo.disarm` via REST; re-fetches entity state and returns re-rendered card HTML for HTMX swap.
+- **Added:** `alarm_panel.js` template — client-side keypad digit entry, code display with dot masking, auto-clear after 120s inactivity, HTMX afterSwap re-initialization. Minimal ~35 lines of IIFE JS.
+- **Added:** Alarm panel CSS — header badge, state label, action button grid, keypad grid, arming option checkboxes, sensor badge pills, diagnostic message banners with orange (warning) and blue (bypassed) theming.
+- **Added:** `_view_needs_alarm_panel` helper — detects alarm-panel cards in views and injects `alarm_panel.js` template into `<head>`.
+- **Added:** `_alarm_sensor_badges` and `_alarm_bypassed_badges` helpers — render sensor badge pills from entity `open_sensors` and `bypassed_sensors` attributes.
+
 ## v0.18.3 (2026-06-28)
 - **Changed:** Fridge config — today-card gets explicit `height: 345` and grid height reduced from 5 to 4 rows (height fix now fills allocated space).
 

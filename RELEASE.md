@@ -1,15 +1,18 @@
-# Release Notes for v0.18.1 (2026-06-28)
+# Release Notes for v0.18.1 (2026-06-28) — v0.19.0 (alarm panel)
 
-A batch of layout fixes and preview improvements: weather cards now show up in the config preview, the fixed-grid view keeps its cards from being squashed, and a draggable divider lets you resize the config editor and preview panes.
+A batch of layout fixes, preview improvements, and a new alarm control panel card: the fixed-grid view keeps cards from being squashed, weather cards show up in previews, a draggable divider lets you resize the config panes, and you can now arm and disarm your Alarmo security system directly from a LightDash dashboard.
 
+- **New card type: `alarm-panel`:** Add `type: alarm-panel` with an `entity: alarm_control_panel.alarmo` to get a full-featured alarm control panel. Shows a state badge with colour-coded icon and status label, arm mode buttons (Away/Home/Night/Vacation/Custom), disarm button, an optional numeric keypad for code entry, and arming options (skip exit delay, bypass open sensors). Action buttons call Alarmo's `arm` and `disarm` services directly.
+- **Diagnostic messages on the card:** When sensors trigger the alarm or are blocking an arm attempt, their names and states appear as pills directly on the card. If sensors were bypassed when arming, a persistent warning shows which ones are bypassed.
+- **Customise appearance:** Use the `states` config key to hide arm mode buttons, rename button labels, override icons or state colours, and reorder buttons — same customisation as the original alarmo-card.
 - **Fixed-grid uses absolute positioning:** When both `container_width` and `container_height` are set, cards in a fixed-grid view are placed with absolute positioning instead of CSS Grid. This means each card sizes naturally — no more cramped rows when a tile has inline controls like numeric input.
-- **Weather cards render in the config preview:** The config preview now injects realistic dummy weather data so weather-forecast cards show their current conditions and 5-day forecast without a live Home Assistant connection — exactly what you see on the real dashboard.
-- **Cleaner preview without HTMX errors:** The preview iframe no longer loads HTMX at all (it's a static layout preview — no live HA data to sync). This eliminates the `Failed to construct 'URL'` browser console error that plagued the srcdoc-based preview, where HTMX couldn't resolve relative URLs against the `about:srcdoc` document origin.
-- **Draggable editor/preview divider:** You can now drag the divider between the config editor and the preview pane left or right to give more space to whichever side you're working on. The divider highlights blue when grabbed.
-- **Weather condition names fixed:** Conditions like `partlycloudy` now display as "Partly cloudy" instead of the raw Home Assistant state string. Added a dedicated name lookup for conditions that don't cleanly split on underscores.
-- **Dimmer and cover popup crashes fixed:** Opening a dashboard with light or cover tiles no longer triggers `closeBtn.addEventListener on null` errors in the browser console — the JavaScript now safely checks for the modal element before attaching event listeners.
-- **Fixed-grid cells fill their row height:** Cards in a fixed-grid view now get an explicit `height` that matches their grid cell size. Even if the card content is short, the container fills the allocated space — no more empty gaps where a card should be.
-- **Fridge config — today-card height tuned:** The agenda card in the fridge dashboard now has `height: 345` and its grid span reduced to 4 rows, letting the card fill its allocated cell naturally now that rows have a fixed height.
+- **Weather cards render in the config preview:** The config preview now injects realistic dummy weather data so weather-forecast cards show their current conditions and 5-day forecast without a live Home Assistant connection.
+- **Cleaner preview without HTMX errors:** The preview iframe no longer loads HTMX at all, eliminating the `Failed to construct 'URL'` browser console error.
+- **Draggable editor/preview divider:** Drag the divider between the config editor and the preview pane left or right to give more space to whichever side you're working on.
+- **Weather condition names fixed:** Conditions like `partlycloudy` now display as "Partly cloudy" instead of the raw Home Assistant state string.
+- **Dimmer and cover popup crashes fixed:** JavaScript now safely checks for the modal element before attaching event listeners.
+- **Fixed-grid cells fill their row height:** Cards now get an explicit `height` that matches their grid cell size.
+- **Fridge config — today-card height tuned:** The agenda card now uses `height: 345` with its grid span reduced to 4 rows.
 
 # Release Notes for v0.18.0 (2026-06-28)
 

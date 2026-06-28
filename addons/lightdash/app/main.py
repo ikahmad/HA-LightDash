@@ -664,10 +664,80 @@ async def view_badge(dashboard: str, view_path: str, idx: int):
             if badge.get("type") != "entity-filter":
                 return HTMLResponse("", status_code=400)
 
-            import app.renderer as r
-            r._entity_states = entity_states
-            html = r._render_entity_filter_badge(badge, idx, view_path)
+            import app.renderer as r2
+            r2._entity_states = entity_states
+            html = r2._render_entity_filter_badge(badge, idx, view_path)
             return HTMLResponse(html, headers=_no_cache)
+
+    return HTMLResponse("", status_code=404)
+
+
+@app.post("/api/alarm-action/{dashboard}/{view_path:path}")
+async def alarm_action(dashboard: str, view_path: str, request: Request):
+    raw = await request.body()
+    raw_str = raw.decode("utf-8", errors="replace")
+    if raw_str.startswith("{"):
+        data: Dict[str, Any] = json.loads(raw_str) if raw_str else {}
+    elif raw_str:
+        data = dict(urllib.parse.parse_qsl(raw_str))
+    else:
+        data = {}
+
+    entity_id = data.get("entity_id", "")
+    action = data.get("action", "")
+    code = data.get("code", "")
+    skip_delay = data.get("skip_delay") in ("true", True)
+    force = data.get("force") in ("true", True)
+
+    dashboards = getattr(app.state, "dashboards", {})
+    d = dashboards.get(dashboard)
+    if not d:
+        return HTMLResponse("", status_code=404)
+
+    ha = getattr(app.state, "ha_client", None)
+    if ha and ha.is_connected and entity_id and action:
+        if action == "disarm":
+            payload: Dict[str, Any] = {"entity_id": entity_id}
+            if code:
+                payload["code"] = code
+            await ha.call_service("alarmo", "disarm", payload)
+        else:
+            payload: Dict[str, Any] = {"entity_id": entity_id, "mode": action}
+            if code:
+                payload["code"] = code
+            if skip_delay:
+                payload["skip_delay"] = True
+            if force:
+                payload["force"] = True
+            await ha.call_service("alarmo", "arm", payload)
+
+    await asyncio.sleep(0.5)
+
+    entity_states: Dict[str, Any] = {}
+    entity_icons: Dict[str, str] = {}
+    if ha and ha.is_connected:
+        states = await ha.get_states()
+        if states:
+            entity_states = {s["entity_id"]: s for s in states}
+
+    cfg = getattr(app.state, "config", None)
+    ha_url = cfg.ha_url if cfg else ""
+
+    import app.renderer as r
+    r._base_path = getattr(app.state, "base_path", "")
+    r._entity_states = entity_states
+    r._entity_icons = entity_icons
+    r._ha_url = ha_url
+    r._dashboard_name = dashboard
+    r._view_path = view_path
+
+    for v in d.views:
+        if v.path == view_path:
+            for card in _walk_cards(v):
+                if card.type == "alarm-panel" and card.get("entity") == entity_id:
+                    html = r._render_alarm_panel(card)
+                    return HTMLResponse(html, headers=_no_cache)
+            break
 
     return HTMLResponse("", status_code=404)
 
