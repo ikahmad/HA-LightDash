@@ -113,6 +113,7 @@ views:
         show_past_events: false
         show_all_day_events: true
         time_format: "HH:mm"
+        height: 345
         entities:
           - entity: calendar.rich_work
             color: blue
@@ -125,7 +126,7 @@ views:
           - entity: calendar.family_schedule
             color: orange
           - entity: calendar.leckie_kershaw_gmail_com
-        grid_layout: {x: 2, y: 9, width: 2, height: 5}
+        grid_layout: {x: 2, y: 9, width: 2, height: 4}
 
       - type: tile
         entity: sensor.joint_charles_cleared_balance

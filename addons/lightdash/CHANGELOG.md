@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.18.3 (2026-06-28)
+- **Changed:** Fridge config — today-card gets explicit `height: 345` and grid height reduced from 5 to 4 rows (height fix now fills allocated space).
+
 ## v0.18.2 (2026-06-28)
 - **Fixed:** Fixed-grid absolute-positioned cells now include `height` in their style — cards fill their allocated grid cell height instead of shrinkwrapping to content.
 
