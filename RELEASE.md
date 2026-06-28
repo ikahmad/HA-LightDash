@@ -1,3 +1,30 @@
+# Release Notes for v0.18.1 (2026-06-28) — v0.19.1 (alarm panel)
+
+A batch of layout fixes, preview improvements, and a new alarm control panel card: the fixed-grid view keeps cards from being squashed, weather cards show up in previews, a draggable divider lets you resize the config panes, and you can now arm and disarm your Alarmo security system directly from a LightDash dashboard.
+
+- **New card type: `alarm-panel`:** Add `type: alarm-panel` with an `entity: alarm_control_panel.alarmo` to get a full-featured alarm control panel. Shows a state badge with colour-coded icon and status label, arm mode buttons (Away/Home/Night/Vacation/Custom), disarm button, an optional numeric keypad for code entry, and arming options (skip exit delay, bypass open sensors). Action buttons call Alarmo's `arm` and `disarm` services directly.
+- **Diagnostic messages on the card:** When sensors trigger the alarm or are blocking an arm attempt, their names and states appear as pills directly on the card. If sensors were bypassed when arming, a persistent warning shows which ones are bypassed.
+- **Customise appearance:** Use the `states` config key to hide arm mode buttons, rename button labels, override icons or state colours, and reorder buttons — same customisation as the original alarmo-card.
+- **Fixed-grid uses absolute positioning:** When both `container_width` and `container_height` are set, cards in a fixed-grid view are placed with absolute positioning instead of CSS Grid. This means each card sizes naturally — no more cramped rows when a tile has inline controls like numeric input.
+- **Weather cards render in the config preview:** The config preview now injects realistic dummy weather data so weather-forecast cards show their current conditions and 5-day forecast without a live Home Assistant connection.
+- **Cleaner preview without HTMX errors:** The preview iframe no longer loads HTMX at all, eliminating the `Failed to construct 'URL'` browser console error.
+- **Draggable editor/preview divider:** Drag the divider between the config editor and the preview pane left or right to give more space to whichever side you're working on.
+- **Weather condition names fixed:** Conditions like `partlycloudy` now display as "Partly cloudy" instead of the raw Home Assistant state string.
+- **Dimmer and cover popup crashes fixed:** JavaScript now safely checks for the modal element before attaching event listeners.
+- **Fixed-grid cells fill their row height:** Cards now get an explicit `height` that matches their grid cell size.
+- **Fridge config — today-card height tuned:** The agenda card now uses `height: 345` with its grid span reduced to 4 rows.
+- **Alarm panel lives in real time:** The card now auto-updates when the alarm state changes externally — if someone arms the alarm from a keypad or the HA app, the card refreshes automatically via SSE.
+- **Refined alarm panel design:** Larger centred state badge with a subtle coloured glow, a proper 3-column numpad (1-9 + 0/backspace/clear), dot indicators for entered codes, and rounded pill-shaped action buttons — all respecting your chosen theme's `--radius`, `--card-bg`, and `--control-bg` variables.
+
+# Release Notes for v0.18.0 (2026-06-28)
+
+The `fixed-grid` view type gives you pixel-perfect control over your dashboard layout. Instead of the auto-flowing section grid, you declare exactly how many rows and columns your view has, then place each card at a specific position by origin and span.
+
+- **New view type: `type: fixed-grid`:** Define a grid at the view level with `grid.rows` and `grid.columns`, then position every card with `grid_layout` (`x`, `y`, `width`, `height`). Coordinates are 0-indexed from top-left — `x: 0, y: 0, width: 6, height: 2` means "starts in the top-left cell and spans 6 columns by 2 rows".
+- **Works with or without a container height:** If you set `container_height`, rows distribute evenly within that space. Without it, the grid uses its own aspect-ratio to size itself — great for dashboards that should fit any display height.
+- **Auto-place for loose cards:** Any card without a `grid_layout` is auto-placed into the next available cell by CSS Grid. No need to position every single card manually.
+- **Consistent gap:** Cards in a fixed grid respect the same 8px gap as section-based views.
+
 # Release Notes for v0.17.0 (2026-06-12)
 
 Adds a compact agenda card that shows what's on your calendars today — and several data-fetching improvements that lay the groundwork for richer cards in future releases.

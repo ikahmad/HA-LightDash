@@ -143,6 +143,31 @@ views:
               columns: 12
   - type: sections
     max_columns: 12
+    title: Alarm
+    path: alarm
+    badges:
+      - type: shortcut
+        icon: mdi:arrow-left-bold
+        label: Back
+        tap_action:
+          action: navigate
+          navigation_path: showcase
+    sections:
+      - type: grid
+        cards:
+          - type: alarm-panel
+            entity: alarm_control_panel.alarmo
+            name: Home Alarm
+            show_keypad: true
+            states:
+              armed_home:
+                button_label: "Stay"
+              armed_night:
+                button_label: "Sleep"
+            grid_options:
+              columns: 12
+  - type: sections
+    max_columns: 12
     title: Weather
     path: weather
     badges:

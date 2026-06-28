@@ -91,6 +91,7 @@ _TPL_SLIDER_SYNC = _load_tpl("slider_sync.js")
 _TPL_DIMMER = _load_tpl("dimmer.js")
 _TPL_COVER = _load_tpl("cover.js")
 _TPL_AUTO_REVERT = _load_tpl("auto_revert.js")
+_TPL_ALARM_PANEL = _load_tpl("alarm_panel.js")
 
 _DIMMER_MODAL_HTML = (_TPL_DIR / "dimmer_modal.html").read_text() if (_TPL_DIR / "dimmer_modal.html").exists() else ""
 _COVER_MODAL_HTML = (_TPL_DIR / "cover_modal.html").read_text() if (_TPL_DIR / "cover_modal.html").exists() else ""
@@ -130,13 +131,15 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             img = _url("/ha/image/serve/" + img[len("/api/image/serve/"):])
         bg += f"background-image: url('{html.escape(img)}');background-size: cover;background-position: center;"
     if dashboard.lightdash.container_width:
-        bg += f"width: {dashboard.lightdash.container_width};"
+        bg += f"width: {dashboard.lightdash.container_width}; max-width: none;"
     if dashboard.lightdash.container_height:
         bg += f"height: {dashboard.lightdash.container_height};overflow-y: auto;"
 
     needs_uplot = _view_needs_charts(view)
 
-    if view.sections:
+    if view.type == "fixed-grid" and view.grid:
+        cards_html = _render_fixed_grid(view, dashboard.lightdash.container_height, dashboard.lightdash.container_width)
+    elif view.sections:
         cards_html = "\n".join(_render_section(s, 2) for s in view.sections)
     else:
         cards_html = "\n".join(_render_card(c, 2) for c in view.cards)
@@ -198,6 +201,9 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             auto_close_reset=auto_close_reset,
         )
 
+    if _view_needs_alarm_panel(view):
+        head_extra += _TPL_ALARM_PANEL.substitute()
+
     if dashboard.lightdash.auto_revert_seconds > 0:
         first_view_url = _url("/d/" + html.escape(_dashboard_name) + "/view/" + html.escape(dashboard.views[0].path))
         ar_secs = dashboard.lightdash.auto_revert_seconds * 1000
@@ -225,6 +231,77 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
         body_tail=body_tail,
     )
 
+
+
+def _render_fixed_grid(view: View, container_height: str = "", container_width: str = "") -> str:
+    g = view.grid
+    if g is None:
+        return ""
+    indent = 2
+    gap = 8
+
+    cards_html = ""
+
+    if container_width and container_height:
+        cw = int(container_width.replace("px", ""))
+        pad = 12
+        grid_w = cw - 2 * pad
+
+        layouts = [c.grid_layout for c in view.cards if c.grid_layout]
+        columns = max((gl.x + gl.width for gl in layouts), default=g.columns)
+        columns = max(columns, g.columns)
+
+        col_w = (grid_w - (columns - 1) * gap) / columns
+
+        style = "position: relative; display: block;"
+        row_h = 40
+
+        for c in view.cards:
+            gl = c.grid_layout
+            cell_style = ""
+            if gl is not None:
+                left = gl.x * (col_w + gap)
+                top = gl.y * row_h
+                width = gl.width * col_w + (gl.width - 1) * gap
+                height = gl.height * row_h + (gl.height - 1) * gap
+                cell_style = f"position: absolute; left: {left:.1f}px; top: {top:.1f}px; width: {width:.1f}px; height: {height:.1f}px;"
+
+            cell_attrs = {"class": "grid-cell"}
+            if cell_style:
+                cell_attrs["style"] = cell_style
+
+            card_content = _render_card(c, indent + 1)
+            cards_html += "\n" + _SP * (indent + 1) + f"<div{_build_attrs(cell_attrs)}>\n"
+            cards_html += card_content
+            cards_html += "\n" + _SP * (indent + 1) + "</div>"
+    else:
+        style = f"--fg-cols: {g.columns}; grid-template-rows: repeat({g.rows}, 1fr)"
+        if container_height:
+            style += "; flex: 1; min-height: 0"
+        else:
+            style += f"; aspect-ratio: {g.columns} / {g.rows}"
+
+        for c in view.cards:
+            gl = c.grid_layout
+            cell_style = ""
+            if gl is not None:
+                x = gl.x + 1
+                y = gl.y + 1
+                cell_style = f"grid-column: {x} / span {gl.width}; grid-row: {y} / span {gl.height}"
+
+            cell_attrs = {"class": "grid-cell"}
+            if cell_style:
+                cell_attrs["style"] = cell_style
+
+            card_content = _render_card(c, indent + 1)
+            cards_html += "\n" + _SP * (indent + 1) + f"<div{_build_attrs(cell_attrs)}>\n"
+            cards_html += card_content
+            cards_html += "\n" + _SP * (indent + 1) + "</div>"
+
+    if cards_html:
+        cards_html += "\n" + _SP * indent
+
+    return _h("div", {"class": "fixed-grid", "style": style}, cards_html, indent)
 
 
 def _render_section(section: Section, indent: int = 2) -> str:
@@ -406,6 +483,16 @@ def _view_needs_fit_text(view: View) -> bool:
                 dfs = str(ld.get("date_fontsize", "") or "")
                 if dfs == "fit" or dfs.startswith("fit "):
                     return True
+    return False
+
+
+def _view_needs_alarm_panel(view: View) -> bool:
+    check_cards = view.cards
+    if view.sections:
+        check_cards = [c for s in view.sections for c in s.cards]
+    for c in check_cards:
+        if c.type == "alarm-panel":
+            return True
     return False
 
 
@@ -605,6 +692,13 @@ def _prefetch_icons(view: View) -> None:
         if c.type == "weather-forecast":
             for cond_icon in _WEATHER_CONDITION_ICONS.values():
                 needed.add(cond_icon)
+        if c.type == "alarm-panel":
+            for alarm_icon in (
+                "shield-off", "shield-home", "shield-lock", "shield-moon",
+                "shield-airplane", "shield-check", "bell-ring", "shield-sync",
+                "shield-alert", "backspace-outline", "close", "alert",
+            ):
+                needed.add(alarm_icon)
         if c.type in ("entities", "glance"):
             for ent in (c.get("entities") or []):
                 if isinstance(ent, str):
@@ -767,6 +861,248 @@ def _color_icon(color: str) -> str:
 # ---- Card Renderers -------------------------------------------------------
 
 
+def _alarm_sensor_badges(sensors: dict, indent: int = 0) -> str:
+    istr = _SP * indent
+    lines = []
+    for eid, sdata in (sensors.items() if isinstance(sensors, dict) else []):
+        sname = ""
+        sstate = ""
+        if isinstance(sdata, dict):
+            sname = sdata.get("name", eid) or eid
+            sstate = sdata.get("state", "") or ""
+        else:
+            sname = str(sdata) or eid
+        icon = _entity_icon(eid, "")
+        icon_html = _icon_html(icon) if icon else ""
+        lines.append(
+            istr + '<span class="alarm-sensor-badge">'
+            + (icon_html if icon_html else "")
+            + '<span>' + html.escape(sname)
+            + (' \u2014 ' + html.escape(sstate) if sstate else "")
+            + '</span></span>'
+        )
+    return "\n".join(lines)
+
+
+def _alarm_bypassed_badges(sensors: list, indent: int = 0) -> str:
+    istr = _SP * indent
+    lines = []
+    for eid in (sensors or []):
+        eid_s = str(eid)
+        sname = ""
+        st = _entity_states.get(eid_s, {})
+        if st:
+            sname = st.get("attributes", {}).get("friendly_name", eid_s)
+        else:
+            sname = eid_s
+        lines.append(
+            istr + '<span class="alarm-sensor-badge">'
+            + '<span>' + html.escape(sname if sname else eid_s) + '</span>'
+            + '</span>'
+        )
+    return "\n".join(lines)
+
+
+@register("alarm-panel")
+def _render_alarm_panel(card: Card, indent: int = 2) -> str:
+    eid = card.get("entity", "")
+    if not eid:
+        return _render_placeholder(card, indent)
+    state_obj = _entity_states.get(eid, {})
+    current_state = state_obj.get("state", "unknown")
+    attrs = state_obj.get("attributes", {})
+    name = card.get("name") or attrs.get("friendly_name", eid)
+    sc = card.get("states", {}) or {}
+    show_keypad = card.get("show_keypad", True)
+    show_messages = card.get("show_messages", True)
+    show_bypassed_sensors = card.get("show_bypassed_sensors", True)
+    state_colors = {
+        "disarmed": "#4CAF50",
+        "armed_home": "#F44336", "armed_away": "#F44336",
+        "armed_night": "#F44336", "armed_vacation": "#F44336",
+        "armed_custom_bypass": "#F44336",
+        "triggered": "#FF0000", "arming": "#FF9800", "pending": "#FF9800",
+    }
+    state_icons = {
+        "disarmed": "mdi:shield-off",
+        "armed_home": "mdi:shield-home", "armed_away": "mdi:shield-lock",
+        "armed_night": "mdi:shield-moon", "armed_vacation": "mdi:shield-airplane",
+        "armed_custom_bypass": "mdi:shield-check",
+        "triggered": "mdi:bell-ring", "arming": "mdi:shield-sync", "pending": "mdi:shield-alert",
+    }
+    state_labels = {
+        "disarmed": "Disarmed",
+        "armed_home": "Armed Home", "armed_away": "Armed Away",
+        "armed_night": "Armed Night", "armed_vacation": "Armed Vacation",
+        "armed_custom_bypass": "Armed Custom",
+        "triggered": "Triggered",
+        "arming": "Arming\u2026", "pending": "Pending\u2026",
+    }
+    mode_icons = {
+        "armed_away": "mdi:shield-lock", "armed_home": "mdi:shield-home",
+        "armed_night": "mdi:shield-moon", "armed_vacation": "mdi:shield-airplane",
+        "armed_custom_bypass": "mdi:shield-check",
+    }
+    mode_labels = {
+        "armed_away": "Away", "armed_home": "Home", "armed_night": "Night",
+        "armed_vacation": "Vacation", "armed_custom_bypass": "Bypass",
+    }
+    for m in mode_labels:
+        ms = sc.get(m, {}) or {}
+        if ms.get("button_label"):
+            mode_labels[m] = ms["button_label"]
+        if ms.get("button_icon"):
+            mode_icons[m] = ms["button_icon"]
+    stc = sc.get(current_state, {}) or {}
+    if stc.get("state_label"):
+        state_labels[current_state] = stc["state_label"]
+    if stc.get("color"):
+        state_colors[current_state] = stc["color"]
+    color = state_colors.get(current_state, "#888")
+    icon = state_icons.get(current_state, "mdi:shield-alert")
+    label = state_labels.get(current_state, current_state)
+    i = _SP * indent
+
+    # Header — centred: icon badge, name, state label
+    header = (
+        i + _SP + '<div class="alarm-header">\n'
+        + i + _SP * 2 + '<div class="alarm-badge">' + _icon_html(icon) + '</div>\n'
+        + i + _SP * 2 + '<div class="alarm-name">' + html.escape(str(name)) + '</div>\n'
+        + i + _SP * 2 + '<div class="alarm-state">' + html.escape(str(label)) + '</div>\n'
+        + i + _SP + '</div>'
+    )
+
+    # Diagnostic messages
+    messages = ""
+    if show_messages:
+        open_sensors = attrs.get("open_sensors", {})
+        bypassed = attrs.get("bypassed_sensors", [])
+        if current_state == "triggered" and open_sensors:
+            badges = _alarm_sensor_badges(open_sensors, indent + 3)
+            messages += (
+                i + _SP + '<div class="alarm-messages">\n'
+                + i + _SP * 2 + _icon_html("mdi:alert", 16) + '<span>Triggered by:</span>\n'
+                + badges + '\n'
+                + i + _SP + '</div>\n'
+            )
+        elif open_sensors and current_state == "disarmed":
+            badges = _alarm_sensor_badges(open_sensors, indent + 3)
+            messages += (
+                i + _SP + '<div class="alarm-messages">\n'
+                + i + _SP * 2 + _icon_html("mdi:alert", 16) + '<span>Sensors blocking arm:</span>\n'
+                + badges + '\n'
+                + i + _SP + '</div>\n'
+            )
+        if show_bypassed_sensors and bypassed and current_state.startswith("armed_"):
+            badges = _alarm_bypassed_badges(bypassed, indent + 3)
+            messages += (
+                i + _SP + '<div class="alarm-messages bypassed">\n'
+                + i + _SP * 2 + _icon_html("mdi:alert", 16) + '<span>Bypassed sensors active</span>\n'
+                + badges + '\n'
+                + i + _SP + '</div>\n'
+            )
+
+    # Action buttons
+    actions = ""
+    if current_state == "disarmed" or current_state == "triggered":
+        buttons = []
+        default_modes = [
+            ("armed_away", 1), ("armed_home", 2), ("armed_night", 3),
+            ("armed_vacation", 4), ("armed_custom_bypass", 5),
+        ]
+        for mode, dflt in default_modes:
+            ms = sc.get(mode, {}) or {}
+            if ms.get("hide"):
+                continue
+            order = ms.get("button_order", dflt)
+            btn_label = ms.get("button_label") or mode_labels.get(mode, mode)
+            btn_icon = ms.get("button_icon") or mode_icons.get(mode, "")
+            ihtml = _icon_html(btn_icon) if btn_icon else ""
+            buttons.append((order, mode, btn_label, ihtml))
+        buttons.sort(key=lambda b: b[0])
+        for _, mode, btn_label, ihtml in buttons:
+            actions += (
+                i + _SP * 2
+                + '<button type="submit" name="action" value="' + html.escape(mode) + '" class="alarm-action-btn">'
+                + (ihtml + '<span>' + html.escape(btn_label) + '</span>' if ihtml else '<span>' + html.escape(btn_label) + '</span>')
+                + '</button>\n'
+            )
+    else:
+        ds = sc.get("disarmed", {}) or {}
+        dlabel = ds.get("button_label") or "Disarm"
+        dicon = _icon_html(ds.get("button_icon") or "mdi:shield-off")
+        actions = (
+            i + _SP * 2
+            + '<button type="submit" name="action" value="disarm" class="alarm-action-btn disarm">'
+            + dicon + '<span>' + html.escape(dlabel) + '</span>'
+            + '</button>\n'
+        )
+    if actions:
+        actions = i + _SP + '<div class="alarm-actions">\n' + actions + i + _SP + '</div>\n'
+
+    # Code section — dot indicators + text input (hidden when keypad shown)
+    safe_id = eid.replace(".", "-")
+    input_cls = "alarm-code-input-field hidden" if show_keypad else "alarm-code-input-field"
+    code_section = (
+        _h("input", {"type": "hidden", "name": "code", "class": "alarm-code-hidden", "id": "alarm-code-" + safe_id, "value": ""}, "", indent + 1)
+        + '\n' + i + _SP + '<div class="alarm-code-section">\n'
+        + i + _SP * 2 + '<div class="alarm-code-dots"></div>\n'
+        + i + _SP * 2 + '<input type="password" class="' + input_cls + '" placeholder="Enter code" inputmode="numeric">\n'
+        + i + _SP + '</div>'
+    )
+
+    keypad = ""
+    if show_keypad:
+        # Classic 3-column numpad: 1-9, then 0, backspace, clear
+        keys = ["1","2","3","4","5","6","7","8","9","0","backspace","clear"]
+        kbtns = ""
+        for k in keys:
+            if k == "backspace":
+                inner = _icon_html("mdi:backspace-outline")
+            elif k == "clear":
+                inner = _icon_html("mdi:close")
+            else:
+                inner = '<span>' + k + '</span>'
+            kbtns += i + _SP * 2 + '<button type="button" class="alarm-key" data-digit="' + k + '">' + inner + '</button>\n'
+        keypad = i + _SP + '<div class="alarm-keypad">\n' + kbtns + i + _SP + '</div>\n'
+
+    # Arming options (disarmed only)
+    options = ""
+    if current_state == "disarmed":
+        skip_checked = ' checked' if card.get("skip_delay", False) else ""
+        force_checked = ' checked' if card.get("force", False) else ""
+        options = (
+            i + _SP + '<div class="alarm-options">\n'
+            + i + _SP * 2 + '<label class="alarm-option"><input type="checkbox" name="skip_delay" value="true"' + skip_checked + '> Skip exit delay</label>\n'
+            + i + _SP * 2 + '<label class="alarm-option"><input type="checkbox" name="force" value="true"' + force_checked + '> Bypass open sensors</label>\n'
+            + i + _SP + '</div>\n'
+        )
+
+    api_url = _url("/api/alarm-action/" + html.escape(_dashboard_name) + "/" + html.escape(_view_path))
+    card_url = _url("/api/alarm-card/" + html.escape(_dashboard_name) + "/" + html.escape(_view_path) + "?entity=" + html.escape(eid))
+    sse_event = "entity_" + eid.replace(".", "_")
+    hidden_eid = _h("input", {"type": "hidden", "name": "entity_id", "value": eid}, "", indent + 2)
+    return (
+        i + '<div class="alarm-panel-wrap"'
+        + ' hx-get="' + card_url + '"'
+        + ' hx-trigger="sse:' + sse_event + '"'
+        + ' hx-swap="outerHTML">\n'
+        + i + _SP + '<form class="alarm-panel"'
+        + ' hx-post="' + api_url + '" hx-swap="outerHTML" hx-target="closest .alarm-panel-wrap">\n'
+        + i + _SP * 2 + '<div class="alarm-card" style="--alarm-color:' + color + '">\n'
+        + hidden_eid + '\n'
+        + header + '\n'
+        + messages
+        + actions
+        + code_section + '\n'
+        + keypad
+        + options
+        + i + _SP * 2 + '</div>\n'
+        + i + _SP + '</form>\n'
+        + i + '</div>'
+    )
+
+
 @register("placeholder")
 def _render_placeholder(card: Card, indent: int = 2) -> str:
     return _h("div", {"class": "ha-card placeholder-card"}, "?", indent)
@@ -844,6 +1180,11 @@ def _render_entities(card: Card, indent: int = 2) -> str:
             rows += _SP * (indent + 1) + '<div class="entities-section-header">' + section + '</div>\n'
             continue
         row_controls = _render_cover_controls(eid, indent + 2) or _render_entity_toggle(eid, indent + 2)
+        features_html = ""
+        if isinstance(ent, dict):
+            ent_features = ent.get("features", [])
+            if ent_features:
+                features_html = "\n" + _render_features(ent, indent + 2)
         row_attrs: Dict[str, str] = {"class": "entity-row" + (" no-icon" if icon_hidden else "")}
         state_color = _icon_color_for_state(eid) if eid else ""
         if state_color:
@@ -878,6 +1219,7 @@ def _render_entities(card: Card, indent: int = 2) -> str:
             + _SP * (indent + 3) + state_span + '\n'
             + _SP * (indent + 2) + '</div>\n'
             + row_controls
+            + features_html
             + _SP * (indent + 1) + '</div>\n'
         )
 
@@ -1479,6 +1821,14 @@ _WEATHER_CONDITION_ICONS: Dict[str, str] = {
     "exceptional": "alert-outline",
 }
 
+_CONDITION_DISPLAY: Dict[str, str] = {
+    "clear-night": "Clear night",
+    "partlycloudy": "Partly cloudy",
+    "snowy-rainy": "Snowy and rainy",
+    "windy-variant": "Windy",
+    "lightning-rainy": "Lightning and rain",
+}
+
 
 @register("weather-forecast")
 def _render_weather_forecast(card: Card, indent: int = 2) -> str:
@@ -1548,7 +1898,14 @@ def _render_weather_forecast(card: Card, indent: int = 2) -> str:
             if val is not None:
                 sec_text = f"{secondary_attr.replace('_', ' ').title()}: {val}"
 
-        cond_display = condition.replace("_", " ").title() if condition else "—"
+        if condition:
+            key = condition.lower()
+            if key in _CONDITION_DISPLAY:
+                cond_display = _CONDITION_DISPLAY[key]
+            else:
+                cond_display = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', condition).replace("_", " ").replace("-", " ").title()
+        else:
+            cond_display = "—"
         temp_display = _fmt_temp(temp)
 
         content += (

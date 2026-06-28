@@ -1,5 +1,47 @@
 # Changelog
 
+## v0.19.1 (2026-06-28)
+- **Changed:** Alarm panel CSS redesigned — uses theme CSS variables (`--radius`, `--radius-sm`, `--card-bg`, `--card-border`, `--control-bg`, `--control-border`, `--divider`, `--text-faint`, `--accent`) throughout. Centred header with large icon badge (64px) and soft state-colour glow via `drop-shadow` + `color-mix`. Keypad now 3-column classic numpad layout (1-9 + 0/backspace/clear). Action buttons use `--radius-sm` and `--control-border`.
+- **Changed:** Alarm panel header simplified — removed `alarm-info` wrapper, state colour now injected as `--alarm-color` CSS custom property on `.alarm-card`, inherited by badge, state label, disarm button, dot indicators, and code input focus ring.
+- **Changed:** Code display replaced with individual dot indicators (`.alarm-code-dots` → `.alarm-code-dot.filled`) instead of a single text span. Text password input hidden when keypad is shown.
+- **Added:** Alarm state icons prefetched via `_prefetch_icons` — all state icons (shield-off, shield-home, shield-lock, shield-moon, shield-airplane, shield-check, bell-ring, shield-sync, shield-alert) and keypad icons (backspace-outline, close, alert) added to prefetch set.
+- **Added:** SSE auto-refresh — wrapper `<div class="alarm-panel-wrap">` with `hx-get="/api/alarm-card/..." hx-trigger="sse:entity_{sanitized_eid}"` listens for entity state changes and fetches fresh card HTML. `GET /api/alarm-card/{dashboard}/{view_path:path}?entity=xx` endpoint re-renders card with fresh HA state.
+- **Added:** Alarm panel card added to showcase Controls view with custom button labels.
+
+## v0.19.0 (2026-06-28)
+- **Added:** `alarm-panel` card type — full-featured alarm control panel for Alarmo integration. Displays state badge (icon+color+label per state), arm/disarm action buttons, numeric keypad for code entry, arming options (skip exit delay, bypass open sensors), and diagnostic messages (triggered sensors, blocking sensors, bypassed sensors).
+- **Added:** `_render_alarm_panel` renderer function in `app/renderer.py` — registered as `alarm-panel` card type with state-aware rendering, configurable state labels/colors/button icons/button order via `states` config key.
+- **Added:** `POST /api/alarm-action/{dashboard}/{view_path}` endpoint — accepts `entity_id`, `action` (arm mode or disarm), `code`, `skip_delay`, `force`; calls `alarmo.arm` / `alarmo.disarm` via REST; re-fetches entity state and returns re-rendered card HTML for HTMX swap.
+- **Added:** `alarm_panel.js` template — client-side keypad digit entry, code display with dot masking, auto-clear after 120s inactivity, HTMX afterSwap re-initialization. Minimal ~35 lines of IIFE JS.
+- **Added:** Alarm panel CSS — header badge, state label, action button grid, keypad grid, arming option checkboxes, sensor badge pills, diagnostic message banners with orange (warning) and blue (bypassed) theming.
+- **Added:** `_view_needs_alarm_panel` helper — detects alarm-panel cards in views and injects `alarm_panel.js` template into `<head>`.
+- **Added:** `_alarm_sensor_badges` and `_alarm_bypassed_badges` helpers — render sensor badge pills from entity `open_sensors` and `bypassed_sensors` attributes.
+
+## v0.18.3 (2026-06-28)
+- **Changed:** Fridge config — today-card gets explicit `height: 345` and grid height reduced from 5 to 4 rows (height fix now fills allocated space).
+
+## v0.18.2 (2026-06-28)
+- **Fixed:** Fixed-grid absolute-positioned cells now include `height` in their style — cards fill their allocated grid cell height instead of shrinkwrapping to content.
+
+## v0.18.1 (2026-06-28)
+- **Fixed:** Fixed-grid view uses absolute positioning when `container_width` + `container_height` are set — cards no longer force-squeeze into CSS Grid 1fr rows, letting tile content (numeric-input, etc.) size naturally.
+- **Fixed:** Weather condition `partlycloudy` now displays as "Partly cloudy" instead of the raw HA state string — added `_CONDITION_DISPLAY` lookup map in `renderer.py`.
+- **Fixed:** Weather forecast cards render forecast data in config preview mode — dummy entity states injected for weather entities absent from real HA connection.
+- **Fixed:** Preview iframe (srcdoc) no longer spews HTMX `Failed to construct 'URL': Invalid URL` errors — HTMX scripts stripped from static preview HTML; `sse-connect`/`hx-ext` attributes also removed.
+- **Fixed:** Null reference errors in dimmer and cover JS modals — added early `if(!m)return;` guards when modal elements are absent.
+- **Fixed:** `closeBtn.addEventListener on null` error in dimmer/cover popup JS — guards added.
+- **Fixed:** `max-width: none` on `.lv-view` when `container_width` is set — overrides CSS clamp that squeezed fixed-width containers.
+- **Added:** Draggable divider between editor and preview panes in config screen — `grid-template-columns: 200px 1fr 8px 1fr` with mouse drag JS on divider element.
+- **Added:** Preview viewport boundaries visually indicated — darker body background and dashed outline around `.lv-view` in config preview.
+- **Added:** `numeric-input` feature support in entities card entity rows — when a dict entity has `features`, delegates to `_render_features` for inline controls.
+
+## v0.18.0 (2026-06-28)
+- **Added:** `fixed-grid` view type — declarative view-level row/column grid. View defines `grid.rows` and `grid.columns`. Each card specifies `grid_layout` with `x`, `y`, `width`, `height` (0-indexed from top-left). Cards without `grid_layout` auto-place. Supports `lightdash.container_height` for evenly-spaced rows or automatic aspect-ratio sizing.
+- **Added:** `GridLayout` and `FixedGrid` dataclasses in `app/models.py`.
+- **Added:** `_parse_fixed_grid_view` in `app/parser.py`.
+- **Added:** `_render_fixed_grid` function in `app/renderer.py` — renders cards within a CSS Grid container with explicit `grid-column`/`grid-row` placement.
+- **Added:** `.fixed-grid` CSS — `display: grid` with `repeat(var(--fg-cols), 1fr)`, 8px gap.
+
 ## v0.17.0 (2026-06-12)
 - **Added:** `custom:today-card` card type — lightweight day-agenda card for `calendar.*` entities with past/current/future/all-day/multi-day event states, per-calendar colors, auto-palette fallback, configurable advance offset, time format, event limit, and `fallback_color`.
 - **Added:** `app/calendar_events.py` — `CalendarCache` (TTL 300s), `get_events()` to fetch events from HA REST API, and `get_dummy_events()` for offline/preview fallback with realistic sample data.

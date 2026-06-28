@@ -18,6 +18,8 @@ Check out the docs for full details on setting up the addon.
 
 ![Agenda card](https://github.com/richkershaw/HA-LightDash/raw/main/example-images/example-today.png)
 
+![Alarm card](https://github.com/richkershaw/HA-LightDash/raw/main/example-images/example-alarm.png)
+
 ![Weather card](https://github.com/richkershaw/HA-LightDash/raw/main/example-images/example-weather.png)
 
 ![Dimmer modal](https://github.com/richkershaw/HA-LightDash/raw/main/example-images/example-modal.png)

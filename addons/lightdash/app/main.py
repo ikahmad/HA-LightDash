@@ -664,10 +664,114 @@ async def view_badge(dashboard: str, view_path: str, idx: int):
             if badge.get("type") != "entity-filter":
                 return HTMLResponse("", status_code=400)
 
-            import app.renderer as r
-            r._entity_states = entity_states
-            html = r._render_entity_filter_badge(badge, idx, view_path)
+            import app.renderer as r2
+            r2._entity_states = entity_states
+            html = r2._render_entity_filter_badge(badge, idx, view_path)
             return HTMLResponse(html, headers=_no_cache)
+
+    return HTMLResponse("", status_code=404)
+
+
+@app.get("/api/alarm-card/{dashboard}/{view_path:path}")
+async def alarm_card_get(dashboard: str, view_path: str, entity: str = ""):
+    if not entity:
+        return HTMLResponse("", status_code=400)
+    dashboards = getattr(app.state, "dashboards", {})
+    d = dashboards.get(dashboard)
+    if not d:
+        return HTMLResponse("", status_code=404)
+    ha = getattr(app.state, "ha_client", None)
+    entity_states: Dict[str, Any] = {}
+    entity_icons: Dict[str, str] = {}
+    if ha and ha.is_connected:
+        states = await ha.get_states()
+        if states:
+            entity_states = {s["entity_id"]: s for s in states}
+    cfg = getattr(app.state, "config", None)
+    ha_url = cfg.ha_url if cfg else ""
+    import app.renderer as r
+    r._base_path = getattr(app.state, "base_path", "")
+    r._entity_states = entity_states
+    r._entity_icons = entity_icons
+    r._ha_url = ha_url
+    r._dashboard_name = dashboard
+    r._view_path = view_path
+    for v in d.views:
+        if v.path == view_path:
+            for card in _walk_cards(v):
+                if card.type == "alarm-panel" and card.get("entity") == entity:
+                    html = r._render_alarm_panel(card)
+                    return HTMLResponse(html, headers=_no_cache)
+            break
+    return HTMLResponse("", status_code=404)
+
+
+@app.post("/api/alarm-action/{dashboard}/{view_path:path}")
+async def alarm_action(dashboard: str, view_path: str, request: Request):
+    raw = await request.body()
+    raw_str = raw.decode("utf-8", errors="replace")
+    if raw_str.startswith("{"):
+        data: Dict[str, Any] = json.loads(raw_str) if raw_str else {}
+    elif raw_str:
+        data = dict(urllib.parse.parse_qsl(raw_str))
+    else:
+        data = {}
+
+    entity_id = data.get("entity_id", "")
+    action = data.get("action", "")
+    code = data.get("code", "")
+    skip_delay = data.get("skip_delay") in ("true", True)
+    force = data.get("force") in ("true", True)
+
+    dashboards = getattr(app.state, "dashboards", {})
+    d = dashboards.get(dashboard)
+    if not d:
+        return HTMLResponse("", status_code=404)
+
+    ha = getattr(app.state, "ha_client", None)
+    if ha and ha.is_connected and entity_id and action:
+        if action == "disarm":
+            payload: Dict[str, Any] = {"entity_id": entity_id}
+            if code:
+                payload["code"] = code
+            await ha.call_service("alarmo", "disarm", payload)
+        else:
+            payload: Dict[str, Any] = {"entity_id": entity_id, "mode": action}
+            if code:
+                payload["code"] = code
+            if skip_delay:
+                payload["skip_delay"] = True
+            if force:
+                payload["force"] = True
+            await ha.call_service("alarmo", "arm", payload)
+
+    await asyncio.sleep(0.5)
+
+    entity_states: Dict[str, Any] = {}
+    entity_icons: Dict[str, str] = {}
+    if ha and ha.is_connected:
+        states = await ha.get_states()
+        if states:
+            entity_states = {s["entity_id"]: s for s in states}
+
+    cfg = getattr(app.state, "config", None)
+    ha_url = cfg.ha_url if cfg else ""
+
+    import app.renderer as r
+    r._base_path = getattr(app.state, "base_path", "")
+    r._entity_states = entity_states
+    r._entity_icons = entity_icons
+    r._ha_url = ha_url
+    r._dashboard_name = dashboard
+    r._view_path = view_path
+
+    for v in d.views:
+        if v.path == view_path:
+            for card in _walk_cards(v):
+                if card.type == "alarm-panel" and card.get("entity") == entity_id:
+                    html = r._render_alarm_panel(card)
+                    return HTMLResponse(html, headers=_no_cache)
+            break
 
     return HTMLResponse("", status_code=404)
 
@@ -908,7 +1012,7 @@ async def config_preview(req: Request):
     }
 
     view = dashboard.views[0]
-    from datetime import datetime as _dt2
+    from datetime import datetime as _dt2, timedelta as _td2
     _ref_date = _dt2.now().astimezone().date()
     calendar_data: dict = {}
     for card in _walk_cards(view):
@@ -917,7 +1021,48 @@ async def config_preview(req: Request):
                 eid = ent.get("entity", "") if isinstance(ent, dict) else ent
                 if eid:
                     calendar_data[eid] = get_dummy_events(_ref_date)
+        if card.type == "weather-forecast":
+            eid = card.get("entity", "")
+            if eid and eid not in entity_states:
+                entity_states[eid] = {
+                    "entity_id": eid,
+                    "state": "partlycloudy",
+                    "attributes": {
+                        "temperature": 21,
+                        "temperature_unit": "\u00b0C",
+                        "humidity": 55,
+                        "condition": "partlycloudy",
+                        "forecast": [
+                            {
+                                "datetime": (_ref_date + _td2(days=i)).strftime("%Y-%m-%dT00:00:00"),
+                                "temperature": max(16, 22 - i * 2),
+                                "templow": max(8, 14 - i * 2),
+                                "condition": "sunny" if i % 2 == 0 else "partlycloudy",
+                                "precipitation": 0.0,
+                            }
+                            for i in range(5)
+                        ],
+                    },
+                }
     html_out = render_view(view, dashboard, ha_url=ha_url, entity_icons=entity_icons, entity_states=entity_states, dashboard_name="_preview", calendar_data=calendar_data)
+    # Strip HTMX — preview is static, and HTMX's new URL() throws
+    # in srcdoc iframes (document.location.href === "about:srcdoc").
+    for tag in (
+        '<script src="https://unpkg.com/htmx.org@2.0.4"></script>',
+        '<script src="https://unpkg.com/htmx-ext-sse@2.2.4/dist/sse.js"></script>',
+    ):
+        html_out = html_out.replace(tag + "\n", "", 1)
+    html_out = html_out.replace(
+        ' hx-ext="sse" sse-connect="/_sse"', "", 1
+    )
+    html_out = html_out.replace(
+        "</head>",
+        '<style>'
+        'body{background:#3a3a3a;margin:0;min-height:100vh}'
+        '.lv-view{outline:1px dashed #666;outline-offset:-1px}'
+        '</style></head>',
+        1,
+    )
 
     pages = ''.join(
         f'<a href="{bp}/d/_preview/view/{html.escape(v.path)}" class="{"active" if v is view else ""}">{html.escape(v.title or v.path)}</a>'

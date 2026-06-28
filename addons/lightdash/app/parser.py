@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import yaml
 
-from app.models import Card, Dashboard, LightdashConfig, Section, View
+from app.models import Card, Dashboard, FixedGrid, GridLayout, LightdashConfig, Section, View
 
 
 def parse_dashboard(raw: Dict[str, Any]) -> Dashboard:
@@ -72,6 +72,9 @@ def _parse_view(data: Dict[str, Any]) -> View:
     if view_type == "custom:layout-card":
         return _parse_layout_view(data, raw_cards, bg_image)
 
+    if view_type == "fixed-grid":
+        return _parse_fixed_grid_view(data, raw_cards, bg_image)
+
     parsed_cards = [_parse_card(c) for c in raw_cards if isinstance(c, dict)]
 
     parsed_sections: List[Section] = []
@@ -135,6 +138,28 @@ def _parse_layout_view(data: Dict[str, Any], raw_cards: List[Dict[str, Any]], bg
     )
 
 
+def _parse_fixed_grid_view(data: Dict[str, Any], raw_cards: List[Dict[str, Any]], bg_image: str) -> View:
+    raw_grid = data.get("grid", {})
+    rows = raw_grid.get("rows", 6)
+    columns = raw_grid.get("columns", 12)
+
+    parsed_cards = [_parse_card(c) for c in raw_cards if isinstance(c, dict)]
+
+    return View(
+        title=data.get("title", ""),
+        path=data.get("path", _slug(data.get("title", "untitled"))),
+        icon=data.get("icon", ""),
+        badges=data.get("badges", []),
+        cards=parsed_cards,
+        sections=[],
+        type="fixed-grid",
+        bg_color=data.get("bg_color", ""),
+        bg_image=bg_image,
+        max_columns=data.get("max_columns", 1),
+        grid=FixedGrid(rows=rows, columns=columns),
+    )
+
+
 def _parse_section(data: Dict[str, Any]) -> Optional[Section]:
     if not isinstance(data, dict):
         return None
@@ -156,15 +181,26 @@ def _parse_section(data: Dict[str, Any]) -> Optional[Section]:
 
 def _parse_card(data: Dict[str, Any]) -> Card:
     card_type = data.get("type", "")
-    config = {k: v for k, v in data.items() if k != "type"}
+    config = {k: v for k, v in data.items() if k not in ("type", "grid_layout")}
+
+    raw_gl = data.get("grid_layout")
+    if isinstance(raw_gl, dict):
+        grid_layout = GridLayout(
+            x=raw_gl.get("x", 0),
+            y=raw_gl.get("y", 0),
+            width=raw_gl.get("width", 1),
+            height=raw_gl.get("height", 1),
+        )
+    else:
+        grid_layout = None
 
     mapper = _CUSTOM_CARD_MAP.get(card_type)
     if mapper:
         new_type, new_config = mapper(config)
         new_config["_original_type"] = card_type
-        return Card(type=new_type, config=new_config)
+        return Card(type=new_type, config=new_config, grid_layout=grid_layout)
 
-    return Card(type=card_type, config=config)
+    return Card(type=card_type, config=config, grid_layout=grid_layout)
 
 
 def _slug(text: str) -> str:

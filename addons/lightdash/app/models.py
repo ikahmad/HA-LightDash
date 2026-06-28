@@ -15,9 +15,24 @@ class Action:
 
 
 @dataclass
+class GridLayout:
+    x: int = 0
+    y: int = 0
+    width: int = 1
+    height: int = 1
+
+
+@dataclass
+class FixedGrid:
+    rows: int
+    columns: int
+
+
+@dataclass
 class Card:
     type: str
     config: Dict[str, Any] = field(default_factory=dict)
+    grid_layout: Optional[GridLayout] = None
 
     def get(self, key: str, default: Any = None) -> Any:
         return self.config.get(key, default)
@@ -42,6 +57,7 @@ class View:
     bg_color: str = ""
     bg_image: str = ""
     max_columns: int = 1
+    grid: Optional[FixedGrid] = None
 
 
 @dataclass

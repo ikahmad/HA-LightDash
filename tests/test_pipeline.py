@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 import yaml
 
-from app.models import Dashboard, View, Card
+from app.models import Card, Dashboard, FixedGrid, GridLayout, View
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TEST_CONFIG = BASE_DIR / "config" / "living_room.yaml"
@@ -958,7 +958,7 @@ def test_weather_forecast_card():
     assert "weather-icon-large" in html
     assert "weather-temp" in html
     assert "weather-condition" in html
-    assert "Partlycloudy" in html
+    assert "Partly cloudy" in html
     assert "19°C" in html  # 18.7 rounded to 19
     assert "H: 22°C" in html  # extrema from first forecast day
     assert "L: 14°C" in html
@@ -1643,3 +1643,115 @@ def test_favourite_values_no_lightdash_key():
     html = render_view(view, dashboard)
 
     assert 'data-fav-vals="' not in html
+
+
+# ---- fixed-grid view type tests ----
+
+
+def test_parse_fixed_grid_view():
+    from app.parser import parse_dashboard
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "type": "fixed-grid",
+                "title": "Grid View",
+                "path": "grid",
+                "grid": {"rows": 4, "columns": 6},
+                "cards": [
+                    {"type": "tile", "entity": "light.a", "grid_layout": {"x": 0, "y": 0, "width": 3, "height": 2}},
+                    {"type": "tile", "entity": "light.b", "grid_layout": {"x": 3, "y": 0, "width": 3, "height": 1}},
+                    {"type": "sensor", "entity": "sensor.temp", "grid_layout": {"x": 3, "y": 1, "width": 3, "height": 1}},
+                ],
+            }
+        ]
+    }
+
+    dashboard = parse_dashboard(raw)
+    assert len(dashboard.views) == 1
+    view = dashboard.views[0]
+    assert view.type == "fixed-grid"
+    assert view.grid is not None
+    assert view.grid.rows == 4
+    assert view.grid.columns == 6
+    assert len(view.cards) == 3
+    assert len(view.sections) == 0
+
+    gl = view.cards[0].grid_layout
+    assert gl is not None
+    assert gl.x == 0
+    assert gl.y == 0
+    assert gl.width == 3
+    assert gl.height == 2
+
+    gl = view.cards[1].grid_layout
+    assert gl is not None
+    assert gl.x == 3
+    assert gl.y == 0
+    assert gl.width == 3
+    assert gl.height == 1
+
+    assert view.cards[2].grid_layout is not None
+
+
+def test_render_fixed_grid_view():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "type": "fixed-grid",
+                "title": "Grid View",
+                "path": "grid",
+                "grid": {"rows": 4, "columns": 6},
+                "cards": [
+                    {"type": "tile", "entity": "light.a", "grid_layout": {"x": 0, "y": 0, "width": 3, "height": 2}},
+                    {"type": "tile", "entity": "light.b", "grid_layout": {"x": 3, "y": 1, "width": 3, "height": 1}},
+                ],
+            }
+        ]
+    }
+
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    html = render_view(view, dashboard)
+
+    assert "fixed-grid" in html
+    assert "--fg-cols: 6" in html
+    assert "aspect-ratio:" in html and "6" in html and "4" in html
+    assert "grid-column: 1 / span 3" in html
+    assert "grid-row: 1 / span 2" in html
+    assert "grid-column: 4 / span 3" in html
+    assert "grid-row: 2 / span 1" in html
+    assert 'class="grid-cell"' in html
+    assert "ha-card" in html
+
+
+def test_fixed_grid_card_without_grid_layout():
+    from app.parser import parse_dashboard
+    from app.renderer import render_view
+
+    raw: Dict[str, Any] = {
+        "views": [
+            {
+                "type": "fixed-grid",
+                "title": "Grid View",
+                "path": "grid",
+                "grid": {"rows": 3, "columns": 4},
+                "cards": [
+                    {"type": "tile", "entity": "light.a", "grid_layout": {"x": 0, "y": 0, "width": 2, "height": 1}},
+                    {"type": "sensor", "entity": "sensor.temp"},
+                ],
+            }
+        ]
+    }
+
+    dashboard = parse_dashboard(raw)
+    view = dashboard.views[0]
+    assert view.cards[1].grid_layout is None
+
+    html = render_view(view, dashboard)
+
+    assert "grid-column: 1 / span 2" in html
+    assert html.count('class="grid-cell"') == 2
