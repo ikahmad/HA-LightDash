@@ -184,4 +184,5 @@ cython_debug/
 /app
 
 addons/lightdash/config/
+tmp/
 .DS_Store
