@@ -134,7 +134,27 @@ lightdash:
   container_height: 480px          # fixed container height
   auto_revert_seconds: 120         # auto-return to first view after inactivity (0=disabled)
   auto_close_modal_seconds: 15     # auto-close popup modals after inactivity (0=disabled)
+  theme: glass                     # optional, CSS theme name (see below)
 ```
+
+#### CSS Themes
+
+LightDash ships with 10 visual themes selectable via `lightdash.theme`:
+
+| Theme       | Style                                            |
+|-------------|--------------------------------------------------|
+| `ha-dark`   | Default — dark HA-style, neutral greys           |
+| `daylight`  | Warm light background, soft amber accents        |
+| `glass`     | Frosted translucent panels, vibrant backdrop     |
+| `hearth`    | Deep rich tones, red/orange warmth               |
+| `ink`       | Pure black & white, high contrast                |
+| `sage`      | Muted greens, earthy feel                        |
+| `soft`      | Pastel tones, gentle readability                 |
+| `bauhaus`   | Sharp corners, bold geometric aesthetic          |
+| `terminal`  | Monospace amber-green, retro CRT vibe            |
+
+All themes share the same class structure — switching is a one-line config
+change with no YAML restructuring needed.
 
 ### View fields
 
@@ -248,6 +268,20 @@ Binary-domain entities (`light`, `switch`, `fan`, `input_boolean`) get a
 toggle switch. Non-binary entities show state text. Cover entities show
 open/stop/close buttons instead of a toggle.
 
+**Long-press dimmer and cover modals:** Light tiles and cover tiles support
+long-press (or hold-click) to open a full-screen modal with a vertical
+position slider. Long-press on mobile, hold-click on desktop.
+
+**Favourite values** on light and cover tiles — set up to 4 preset brightness
+or position values that appear as tap-able shortcuts inside the modal:
+
+```yaml
+type: tile
+entity: light.living_room
+lightdash:
+  favourite_values: [25, 50, 75, 100]   # up to 4 values, 0–100
+```
+
 ### entities
 
 A grouped list of entity rows, each with icon, name, state, and controls.
@@ -269,6 +303,23 @@ entities:
 
 Cover entities automatically get open/stop/close buttons.
 Binary non-cover entities get a toggle switch.
+
+**Additional entity-row options:**
+
+```yaml
+entities:
+  - entity: light.kitchen
+    name: Kitchen
+    icon: mdi:counter
+    icon: none                # hide the icon entirely
+    features:                 # inline controls on entity rows
+      - type: numeric-input
+        style: buttons        # increment/decrement buttons
+```
+
+Set `icon: none` to hide the icon row — name and state shift left for a
+cleaner compact look. Entity rows support `features` (same as tile cards):
+`numeric-input` adds +/- buttons alongside the state text.
 
 ### button
 
@@ -341,9 +392,22 @@ type: clock
 time_zone: Europe/London
 time_format: "24"           # or "12"
 show_seconds: false
-clock_size: large           # small / medium / large
+clock_size: large           # small / medium / large / fit / "fit 75%" / "150%"
 no_background: true
+lightdash:
+  date_show: true            # show date line below time
+  date_format: default       # default / iso / locale
+  date_fontsize: fit 50%     # date line size (same options as clock_size)
 ```
+
+`clock_size` accepts `small`, `medium`, `large`, `"fit"` (auto-scale to fill
+width), `"fit N%"` (auto-scale then reduce by percentage), or percentage
+strings like `"150%"`.
+
+The `lightdash` subsection adds an optional date line below the clock.
+`date_format` options: `default` (long date), `iso` (YYYY-MM-DD),
+`locale` (localised short format). `date_fontsize` uses the same sizing
+options as `clock_size`.
 
 ### sensor
 
@@ -509,9 +573,147 @@ auto-palette: `#03a9f4`, `#e91e63`, `#009688`, `#ff9800`, `#926bc7`,
 The card respects `advance` for looking ahead or behind, and `limit` for
 capping the number of visible events.
 
+### alarm-panel
+
+Full-featured alarm control panel for the [Alarmo](https://github.com/nielsfaber/alarmo)
+integration. Shows a state badge with colour-coded icon and label, arm/disarm
+action buttons, a numeric keypad for code entry, arming options (skip exit
+delay, bypass open sensors), and diagnostic messages.
+
+```yaml
+type: alarm-panel
+entity: alarm_control_panel.alarmo
+name: House Alarm
+show_keypad: true          # optional, show numeric keypad (default true)
+show_messages: true        # optional, show diagnostic messages (default true)
+show_bypassed_sensors: true  # optional, show bypassed-sensors warning (default true)
+skip_delay: false          # optional, default state for "Skip exit delay" checkbox
+force: false               # optional, default state for "Bypass open sensors" checkbox
+states:                    # optional, override per-state appearance
+  armed_home:
+    button_label: "Stay"   # rename the arm button
+    hide: false            # set true to hide this arm button
+    button_order: 2        # reorder buttons (ascending, default 0)
+  armed_away:
+    button_icon: mdi:shield-lock  # override button icon
+    button_label: "Full"
+  disarmed:
+    state_label: "Offline" # override the status label shown
+    color: "#4CAF50"       # override the state colour
+  armed_night:
+    hide: true             # hides this arm mode entirely
+```
+
+**State colours and icons:**
+
+| State                  | Default colour | Icon                |
+|------------------------|---------------|---------------------|
+| `disarmed`             | Green         | `shield-off`        |
+| `armed_home`           | Red           | `shield-home`       |
+| `armed_away`           | Red           | `shield-lock`       |
+| `armed_night`          | Red           | `shield-moon`       |
+| `armed_vacation`       | Red           | `shield-airplane`   |
+| `armed_custom_bypass`  | Red           | `shield-check`      |
+| `triggered`            | Bright red    | `bell-ring`         |
+| `arming` / `pending`   | Amber         | `shield-sync` / `shield-alert` |
+
+**Action buttons** appear when the alarm is disarmed. Available modes: Away,
+Home, Night, Vacation, Bypass. A **Disarm** button (red-accented) replaces
+them when the alarm is armed.
+
+**Code entry:** A password input accepts the disarm/arm code. When `show_keypad`
+is enabled (default), a 3-column numeric keypad (1-9, 0, backspace, clear)
+replaces the text input — dot indicators show how many digits have been entered.
+The code auto-clears after 120 seconds of inactivity.
+
+**Arming options** (shown only when disarmed):
+- **Skip exit delay** — arms immediately, no countdown
+- **Bypass open sensors** — forces arming, temporarily bypassing sensors
+
+**Diagnostic messages** appear when:
+- **Sensors triggered:** alarm is in `triggered` state with `open_sensors`
+  in entity attributes — each sensor shown as a badge with name and state
+- **Sensors blocking:** arm attempt failed because sensors are open — shown
+  on the re-rendered card after the service call fails
+- **Bypassed sensors active:** alarm is armed with bypassed sensors
+
+**Live updates:** The card listens for SSE entity state events. If someone
+arms or disarms the alarm from a keypad, the HA app, or an automation, the
+card re-renders automatically — no page refresh needed.
+
 ### placeholder
 
 Rendered when a card type is unknown. Displays a `?` placeholder.
+
+
+Badges
+------
+
+Views can display a row of compact pill-shaped badges at the top of the
+dashboard. Three badge types are available:
+
+### Entity badges
+
+Display an entity's icon, name, and live state. Tap to toggle binary entities.
+
+```yaml
+badges:
+  - type: entity
+    entity: light.porch
+    name: Porch
+  - type: entity
+    entity: sensor.temperature
+    name: Temp
+```
+
+### Shortcut badges
+
+Navigate to another view or open an external URL.
+
+```yaml
+badges:
+  - type: shortcut
+    icon: mdi:arrow-left-bold
+    label: Back
+    tap_action:
+      action: navigate
+      navigation_path: home
+  - type: shortcut
+    icon: mdi:weather-sunny
+    label: HA
+    tap_action:
+      action: url
+      url_path: http://ha.local:8123
+```
+
+### Entity-filter badges
+
+Only appear when conditions are met. Re-evaluates on SSE entity state
+changes so the badge appears and disappears dynamically.
+
+```yaml
+badges:
+  - type: entity-filter
+    entity: cover.kitchen_roof
+    name: Roof open
+    conditions:
+      - entity: cover.kitchen_roof
+        state: open
+```
+
+Tap an entity-filter badge to navigate to another view:
+
+```yaml
+  - type: entity-filter
+    entity: sensor.smoke_co_alarm
+    name: Smoke alarm
+    conditions:
+      - entity: sensor.smoke_co_alarm
+        state: 'on'
+    tap_action:
+      action: navigate
+      navigation_path: alerts
+```
 
 
 Tap Actions
@@ -549,6 +751,7 @@ never sees the original type.
 | `custom:mushroom-cover-card`     | `entities`| single entity row with open/stop/close buttons |
 | `custom:mushroom-number-card`    | `tile`    | numeric-input feature                          |
 | `custom:today-card`              | `today`   | day-agenda card for `calendar.*` entities      |
+| `custom:alarmo-card`             | `alarm-panel` | alarm control panel for Alarmo integration |
 | `custom:layout-card` (view type) | sections  | grouped by `custom:layout-break` into sections |
 
 **Unsupported card types** (not mapped, rendered as `placeholder`):
