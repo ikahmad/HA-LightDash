@@ -1,3 +1,12 @@
+# Release Notes for v0.18.0 (2026-06-28)
+
+The `fixed-grid` view type gives you pixel-perfect control over your dashboard layout. Instead of the auto-flowing section grid, you declare exactly how many rows and columns your view has, then place each card at a specific position by origin and span.
+
+- **New view type: `type: fixed-grid`:** Define a grid at the view level with `grid.rows` and `grid.columns`, then position every card with `grid_layout` (`x`, `y`, `width`, `height`). Coordinates are 0-indexed from top-left — `x: 0, y: 0, width: 6, height: 2` means "starts in the top-left cell and spans 6 columns by 2 rows".
+- **Works with or without a container height:** If you set `container_height`, rows distribute evenly within that space. Without it, the grid uses its own aspect-ratio to size itself — great for dashboards that should fit any display height.
+- **Auto-place for loose cards:** Any card without a `grid_layout` is auto-placed into the next available cell by CSS Grid. No need to position every single card manually.
+- **Consistent gap:** Cards in a fixed grid respect the same 8px gap as section-based views.
+
 # Release Notes for v0.17.0 (2026-06-12)
 
 Adds a compact agenda card that shows what's on your calendars today — and several data-fetching improvements that lay the groundwork for richer cards in future releases.

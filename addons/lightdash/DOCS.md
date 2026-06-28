@@ -145,12 +145,58 @@ lightdash:
 | `icon`        | MDI icon (shown in view index)                     |
 | `bg_color`    | CSS background-color                               |
 | `bg_image`    | Background image URL (`/api/image/serve/...`)      |
-| `type`        | View layout type (`sections` or `custom:layout-card`) |
+| `type`        | View layout type (`sections`, `custom:layout-card`, or `fixed-grid`) |
 | `max_columns` | Column count for max-width grid                    |
 
 When `type: custom:layout-card` is used, the parser groups cards into grid
 sections split by `custom:layout-break` card entries. The `layout.max_cols`
 value determines section column count.
+
+### Fixed-grid view type
+
+Use `type: fixed-grid` for a view-level row-and-column grid where each card
+has explicit position and size. The view defines the grid dimensions, and
+each card specifies its origin and span.
+
+```yaml
+views:
+  - type: fixed-grid
+    title: My Grid
+    grid:
+      rows: 6
+      columns: 12
+    cards:
+      - type: tile
+        entity: light.living_room
+        grid_layout:
+          x: 0
+          y: 0
+          width: 6
+          height: 2
+      - type: tile
+        entity: light.bedroom
+        grid_layout:
+          x: 6
+          y: 0
+          width: 6
+          height: 2
+```
+
+| Field            | Description                                   |
+|------------------|-----------------------------------------------|
+| `grid.rows`      | Number of rows in the grid                    |
+| `grid.columns`   | Number of columns in the grid                 |
+| `grid_layout.x`  | Column origin (0-indexed, top-left)           |
+| `grid_layout.y`  | Row origin (0-indexed, top-left)              |
+| `grid_layout.width`  | Number of columns to span                 |
+| `grid_layout.height` | Number of rows to span                   |
+
+Cards without a `grid_layout` are auto-placed by CSS Grid into the next
+available cell.
+
+When `lightdash.container_height` is set, rows distribute evenly within that
+height. Without it, the grid auto-sizes via `aspect-ratio` based on your
+column/row counts.
 
 ### Section fields
 

@@ -136,7 +136,9 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
 
     needs_uplot = _view_needs_charts(view)
 
-    if view.sections:
+    if view.type == "fixed-grid" and view.grid:
+        cards_html = _render_fixed_grid(view, dashboard.lightdash.container_height)
+    elif view.sections:
         cards_html = "\n".join(_render_section(s, 2) for s in view.sections)
     else:
         cards_html = "\n".join(_render_card(c, 2) for c in view.cards)
@@ -225,6 +227,40 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
         body_tail=body_tail,
     )
 
+
+
+def _render_fixed_grid(view: View, container_height: str = "") -> str:
+    g = view.grid
+    if g is None:
+        return ""
+    indent = 2
+
+    style = f"--fg-cols: {g.columns}; grid-template-rows: repeat({g.rows}, 1fr)"
+    if not container_height:
+        style += f"; aspect-ratio: {g.columns} / {g.rows}"
+
+    cards_html = ""
+    for c in view.cards:
+        gl = c.grid_layout
+        cell_style = ""
+        if gl is not None:
+            x = gl.x + 1
+            y = gl.y + 1
+            cell_style = f"grid-column: {x} / span {gl.width}; grid-row: {y} / span {gl.height}"
+
+        cell_attrs = {"class": "grid-cell"}
+        if cell_style:
+            cell_attrs["style"] = cell_style
+
+        card_content = _render_card(c, indent + 1)
+        cards_html += "\n" + _SP * (indent + 1) + f"<div{_build_attrs(cell_attrs)}>\n"
+        cards_html += card_content
+        cards_html += "\n" + _SP * (indent + 1) + "</div>"
+
+    if cards_html:
+        cards_html += "\n" + _SP * indent
+
+    return _h("div", {"class": "fixed-grid", "style": style}, cards_html, indent)
 
 
 def _render_section(section: Section, indent: int = 2) -> str:

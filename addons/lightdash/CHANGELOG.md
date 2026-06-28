@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.18.0 (2026-06-28)
+- **Added:** `fixed-grid` view type — declarative view-level row/column grid. View defines `grid.rows` and `grid.columns`. Each card specifies `grid_layout` with `x`, `y`, `width`, `height` (0-indexed from top-left). Cards without `grid_layout` auto-place. Supports `lightdash.container_height` for evenly-spaced rows or automatic aspect-ratio sizing.
+- **Added:** `GridLayout` and `FixedGrid` dataclasses in `app/models.py`.
+- **Added:** `_parse_fixed_grid_view` in `app/parser.py`.
+- **Added:** `_render_fixed_grid` function in `app/renderer.py` — renders cards within a CSS Grid container with explicit `grid-column`/`grid-row` placement.
+- **Added:** `.fixed-grid` CSS — `display: grid` with `repeat(var(--fg-cols), 1fr)`, 8px gap.
+
 ## v0.17.0 (2026-06-12)
 - **Added:** `custom:today-card` card type — lightweight day-agenda card for `calendar.*` entities with past/current/future/all-day/multi-day event states, per-calendar colors, auto-palette fallback, configurable advance offset, time format, event limit, and `fallback_color`.
 - **Added:** `app/calendar_events.py` — `CalendarCache` (TTL 300s), `get_events()` to fetch events from HA REST API, and `get_dummy_events()` for offline/preview fallback with realistic sample data.

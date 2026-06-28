@@ -631,6 +631,13 @@ html, body {
 .clock-size-medium .clock-digital { font-size: 2.6rem; }
 .clock-size-large .clock-digital { font-size: 4rem; }
 
+/* ----- Fixed Grid (view-level row/column layout) ----- */
+.fixed-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--fg-cols, 12), 1fr);
+  gap: 8px;
+}
+
 /* ----- Grid Card ----- */
 .grid-card {
   display: grid;
