@@ -8,6 +8,7 @@ A batch of layout fixes and preview improvements: weather cards now show up in t
 - **Draggable editor/preview divider:** You can now drag the divider between the config editor and the preview pane left or right to give more space to whichever side you're working on. The divider highlights blue when grabbed.
 - **Weather condition names fixed:** Conditions like `partlycloudy` now display as "Partly cloudy" instead of the raw Home Assistant state string. Added a dedicated name lookup for conditions that don't cleanly split on underscores.
 - **Dimmer and cover popup crashes fixed:** Opening a dashboard with light or cover tiles no longer triggers `closeBtn.addEventListener on null` errors in the browser console — the JavaScript now safely checks for the modal element before attaching event listeners.
+- **Fixed-grid cells fill their row height:** Cards in a fixed-grid view now get an explicit `height` that matches their grid cell size. Even if the card content is short, the container fills the allocated space — no more empty gaps where a card should be.
 
 # Release Notes for v0.18.0 (2026-06-28)
 

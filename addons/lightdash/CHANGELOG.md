@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.18.2 (2026-06-28)
+- **Fixed:** Fixed-grid absolute-positioned cells now include `height` in their style — cards fill their allocated grid cell height instead of shrinkwrapping to content.
+
 ## v0.18.1 (2026-06-28)
 - **Fixed:** Fixed-grid view uses absolute positioning when `container_width` + `container_height` are set — cards no longer force-squeeze into CSS Grid 1fr rows, letting tile content (numeric-input, etc.) size naturally.
 - **Fixed:** Weather condition `partlycloudy` now displays as "Partly cloudy" instead of the raw HA state string — added `_CONDITION_DISPLAY` lookup map in `renderer.py`.

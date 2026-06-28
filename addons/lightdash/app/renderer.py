@@ -259,7 +259,8 @@ def _render_fixed_grid(view: View, container_height: str = "", container_width: 
                 left = gl.x * (col_w + gap)
                 top = gl.y * row_h
                 width = gl.width * col_w + (gl.width - 1) * gap
-                cell_style = f"position: absolute; left: {left:.1f}px; top: {top:.1f}px; width: {width:.1f}px;"
+                height = gl.height * row_h + (gl.height - 1) * gap
+                cell_style = f"position: absolute; left: {left:.1f}px; top: {top:.1f}px; width: {width:.1f}px; height: {height:.1f}px;"
 
             cell_attrs = {"class": "grid-cell"}
             if cell_style:
