@@ -908,7 +908,7 @@ async def config_preview(req: Request):
     }
 
     view = dashboard.views[0]
-    from datetime import datetime as _dt2
+    from datetime import datetime as _dt2, timedelta as _td2
     _ref_date = _dt2.now().astimezone().date()
     calendar_data: dict = {}
     for card in _walk_cards(view):
@@ -917,7 +917,48 @@ async def config_preview(req: Request):
                 eid = ent.get("entity", "") if isinstance(ent, dict) else ent
                 if eid:
                     calendar_data[eid] = get_dummy_events(_ref_date)
+        if card.type == "weather-forecast":
+            eid = card.get("entity", "")
+            if eid and eid not in entity_states:
+                entity_states[eid] = {
+                    "entity_id": eid,
+                    "state": "partlycloudy",
+                    "attributes": {
+                        "temperature": 21,
+                        "temperature_unit": "\u00b0C",
+                        "humidity": 55,
+                        "condition": "partlycloudy",
+                        "forecast": [
+                            {
+                                "datetime": (_ref_date + _td2(days=i)).strftime("%Y-%m-%dT00:00:00"),
+                                "temperature": max(16, 22 - i * 2),
+                                "templow": max(8, 14 - i * 2),
+                                "condition": "sunny" if i % 2 == 0 else "partlycloudy",
+                                "precipitation": 0.0,
+                            }
+                            for i in range(5)
+                        ],
+                    },
+                }
     html_out = render_view(view, dashboard, ha_url=ha_url, entity_icons=entity_icons, entity_states=entity_states, dashboard_name="_preview", calendar_data=calendar_data)
+    # Strip HTMX — preview is static, and HTMX's new URL() throws
+    # in srcdoc iframes (document.location.href === "about:srcdoc").
+    for tag in (
+        '<script src="https://unpkg.com/htmx.org@2.0.4"></script>',
+        '<script src="https://unpkg.com/htmx-ext-sse@2.2.4/dist/sse.js"></script>',
+    ):
+        html_out = html_out.replace(tag + "\n", "", 1)
+    html_out = html_out.replace(
+        ' hx-ext="sse" sse-connect="/_sse"', "", 1
+    )
+    html_out = html_out.replace(
+        "</head>",
+        '<style>'
+        'body{background:#3a3a3a;margin:0;min-height:100vh}'
+        '.lv-view{outline:1px dashed #666;outline-offset:-1px}'
+        '</style></head>',
+        1,
+    )
 
     pages = ''.join(
         f'<a href="{bp}/d/_preview/view/{html.escape(v.path)}" class="{"active" if v is view else ""}">{html.escape(v.title or v.path)}</a>'

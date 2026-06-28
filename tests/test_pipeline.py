@@ -958,7 +958,7 @@ def test_weather_forecast_card():
     assert "weather-icon-large" in html
     assert "weather-temp" in html
     assert "weather-condition" in html
-    assert "Partlycloudy" in html
+    assert "Partly cloudy" in html
     assert "19°C" in html  # 18.7 rounded to 19
     assert "H: 22°C" in html  # extrema from first forecast day
     assert "L: 14°C" in html

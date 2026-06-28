@@ -1,6 +1,6 @@
 <script>
 document.addEventListener("DOMContentLoaded",function(){
-var m=document.getElementById("cover-modal");
+var m=document.getElementById("cover-modal");if(!m)return;
 var track=document.getElementById("cover-track");
 var fill=document.getElementById("cover-fill");
 var posEl=document.getElementById("cover-pos");

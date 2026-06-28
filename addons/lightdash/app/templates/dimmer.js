@@ -1,6 +1,6 @@
 <script>
 document.addEventListener("DOMContentLoaded",function(){
-var m=document.getElementById("dimmer-modal");
+var m=document.getElementById("dimmer-modal");if(!m)return;
 var track=document.getElementById("dimmer-track");
 var fill=document.getElementById("dimmer-fill");
 var pct=document.getElementById("dimmer-pct");

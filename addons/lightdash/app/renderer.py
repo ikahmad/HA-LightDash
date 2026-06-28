@@ -130,14 +130,14 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
             img = _url("/ha/image/serve/" + img[len("/api/image/serve/"):])
         bg += f"background-image: url('{html.escape(img)}');background-size: cover;background-position: center;"
     if dashboard.lightdash.container_width:
-        bg += f"width: {dashboard.lightdash.container_width};"
+        bg += f"width: {dashboard.lightdash.container_width}; max-width: none;"
     if dashboard.lightdash.container_height:
         bg += f"height: {dashboard.lightdash.container_height};overflow-y: auto;"
 
     needs_uplot = _view_needs_charts(view)
 
     if view.type == "fixed-grid" and view.grid:
-        cards_html = _render_fixed_grid(view, dashboard.lightdash.container_height)
+        cards_html = _render_fixed_grid(view, dashboard.lightdash.container_height, dashboard.lightdash.container_width)
     elif view.sections:
         cards_html = "\n".join(_render_section(s, 2) for s in view.sections)
     else:
@@ -229,33 +229,69 @@ def render_view(view: View, dashboard: Dashboard, ha_url: str = "", entity_icons
 
 
 
-def _render_fixed_grid(view: View, container_height: str = "") -> str:
+def _render_fixed_grid(view: View, container_height: str = "", container_width: str = "") -> str:
     g = view.grid
     if g is None:
         return ""
     indent = 2
-
-    style = f"--fg-cols: {g.columns}; grid-template-rows: repeat({g.rows}, 1fr)"
-    if not container_height:
-        style += f"; aspect-ratio: {g.columns} / {g.rows}"
+    gap = 8
 
     cards_html = ""
-    for c in view.cards:
-        gl = c.grid_layout
-        cell_style = ""
-        if gl is not None:
-            x = gl.x + 1
-            y = gl.y + 1
-            cell_style = f"grid-column: {x} / span {gl.width}; grid-row: {y} / span {gl.height}"
 
-        cell_attrs = {"class": "grid-cell"}
-        if cell_style:
-            cell_attrs["style"] = cell_style
+    if container_width and container_height:
+        cw = int(container_width.replace("px", ""))
+        pad = 12
+        grid_w = cw - 2 * pad
 
-        card_content = _render_card(c, indent + 1)
-        cards_html += "\n" + _SP * (indent + 1) + f"<div{_build_attrs(cell_attrs)}>\n"
-        cards_html += card_content
-        cards_html += "\n" + _SP * (indent + 1) + "</div>"
+        layouts = [c.grid_layout for c in view.cards if c.grid_layout]
+        columns = max((gl.x + gl.width for gl in layouts), default=g.columns)
+        columns = max(columns, g.columns)
+
+        col_w = (grid_w - (columns - 1) * gap) / columns
+
+        style = "position: relative; display: block;"
+        row_h = 40
+
+        for c in view.cards:
+            gl = c.grid_layout
+            cell_style = ""
+            if gl is not None:
+                left = gl.x * (col_w + gap)
+                top = gl.y * row_h
+                width = gl.width * col_w + (gl.width - 1) * gap
+                cell_style = f"position: absolute; left: {left:.1f}px; top: {top:.1f}px; width: {width:.1f}px;"
+
+            cell_attrs = {"class": "grid-cell"}
+            if cell_style:
+                cell_attrs["style"] = cell_style
+
+            card_content = _render_card(c, indent + 1)
+            cards_html += "\n" + _SP * (indent + 1) + f"<div{_build_attrs(cell_attrs)}>\n"
+            cards_html += card_content
+            cards_html += "\n" + _SP * (indent + 1) + "</div>"
+    else:
+        style = f"--fg-cols: {g.columns}; grid-template-rows: repeat({g.rows}, 1fr)"
+        if container_height:
+            style += "; flex: 1; min-height: 0"
+        else:
+            style += f"; aspect-ratio: {g.columns} / {g.rows}"
+
+        for c in view.cards:
+            gl = c.grid_layout
+            cell_style = ""
+            if gl is not None:
+                x = gl.x + 1
+                y = gl.y + 1
+                cell_style = f"grid-column: {x} / span {gl.width}; grid-row: {y} / span {gl.height}"
+
+            cell_attrs = {"class": "grid-cell"}
+            if cell_style:
+                cell_attrs["style"] = cell_style
+
+            card_content = _render_card(c, indent + 1)
+            cards_html += "\n" + _SP * (indent + 1) + f"<div{_build_attrs(cell_attrs)}>\n"
+            cards_html += card_content
+            cards_html += "\n" + _SP * (indent + 1) + "</div>"
 
     if cards_html:
         cards_html += "\n" + _SP * indent
@@ -880,6 +916,11 @@ def _render_entities(card: Card, indent: int = 2) -> str:
             rows += _SP * (indent + 1) + '<div class="entities-section-header">' + section + '</div>\n'
             continue
         row_controls = _render_cover_controls(eid, indent + 2) or _render_entity_toggle(eid, indent + 2)
+        features_html = ""
+        if isinstance(ent, dict):
+            ent_features = ent.get("features", [])
+            if ent_features:
+                features_html = "\n" + _render_features(ent, indent + 2)
         row_attrs: Dict[str, str] = {"class": "entity-row" + (" no-icon" if icon_hidden else "")}
         state_color = _icon_color_for_state(eid) if eid else ""
         if state_color:
@@ -914,6 +955,7 @@ def _render_entities(card: Card, indent: int = 2) -> str:
             + _SP * (indent + 3) + state_span + '\n'
             + _SP * (indent + 2) + '</div>\n'
             + row_controls
+            + features_html
             + _SP * (indent + 1) + '</div>\n'
         )
 
@@ -1515,6 +1557,14 @@ _WEATHER_CONDITION_ICONS: Dict[str, str] = {
     "exceptional": "alert-outline",
 }
 
+_CONDITION_DISPLAY: Dict[str, str] = {
+    "clear-night": "Clear night",
+    "partlycloudy": "Partly cloudy",
+    "snowy-rainy": "Snowy and rainy",
+    "windy-variant": "Windy",
+    "lightning-rainy": "Lightning and rain",
+}
+
 
 @register("weather-forecast")
 def _render_weather_forecast(card: Card, indent: int = 2) -> str:
@@ -1584,7 +1634,14 @@ def _render_weather_forecast(card: Card, indent: int = 2) -> str:
             if val is not None:
                 sec_text = f"{secondary_attr.replace('_', ' ').title()}: {val}"
 
-        cond_display = condition.replace("_", " ").title() if condition else "—"
+        if condition:
+            key = condition.lower()
+            if key in _CONDITION_DISPLAY:
+                cond_display = _CONDITION_DISPLAY[key]
+            else:
+                cond_display = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', condition).replace("_", " ").replace("-", " ").title()
+        else:
+            cond_display = "—"
         temp_display = _fmt_temp(temp)
 
         content += (

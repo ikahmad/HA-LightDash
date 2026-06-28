@@ -9,7 +9,7 @@ $css_link
 <style>
   #config-layout {
     display: grid;
-    grid-template-columns: 200px 1fr 1fr;
+    grid-template-columns: 200px 1fr 8px 1fr;
     height: 100vh;
     overflow: hidden;
   }
@@ -160,13 +160,20 @@ $css_link
     background: #3a4a3a;
   }
   #preview-pane {
-    border-left: 1px solid #2a2a2a;
     background: #111;
   }
   #preview-frame {
     width: 100%;
     height: 100%;
     border: none;
+  }
+  #divider {
+    cursor: col-resize;
+    background: #2a2a2a;
+    position: relative;
+  }
+  #divider:hover, #divider.active {
+    background: #1e3a5f;
   }
 </style>
 $sw_script
@@ -189,6 +196,7 @@ $sw_script
       <button id="save-btn">Save</button>
     </div>
   </main>
+  <div id="divider"></div>
   <aside id="preview-pane">
     <iframe id="preview-frame" srcdoc="<html><body style='background:#111;color:#555;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;font-size:1.2rem'>Preview</body></html>"></iframe>
   </aside>
@@ -213,6 +221,7 @@ const PUBLIC_BASE="$public_base";
   const previewFrame = document.getElementById("preview-frame");
   const delBtn = document.getElementById("del-btn");
   const renameBtn = document.getElementById("rename-btn");
+  const divider = document.getElementById("divider");
 
   function setStatus(msg, type) {
     statusMsg.textContent = msg;
@@ -406,6 +415,38 @@ const PUBLIC_BASE="$public_base";
     cm = null;
     ta.style.display = "";
   }
+
+  let dragState = null;
+  divider.addEventListener("mousedown", function(e) {
+    e.preventDefault();
+    const rect = document.getElementById("config-layout").getBoundingClientRect();
+    const startX = e.clientX;
+    const startCols = getComputedStyle(document.getElementById("config-layout")).gridTemplateColumns;
+    dragState = { startX, startCols, rect };
+    divider.classList.add("active");
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  });
+  document.addEventListener("mousemove", function(e) {
+    if (!dragState) return;
+    const dx = e.clientX - dragState.startX;
+    const sidebarW = 200;
+    const divW = 8;
+    const avail = dragState.rect.width - sidebarW - divW;
+    const parts = dragState.startCols.split(" ");
+    const editorPx = parseFloat(parts[1]) || (avail / 2);
+    const newEditor = Math.max(100, Math.min(avail - 100, editorPx + dx));
+    const newPreview = avail - newEditor;
+    document.getElementById("config-layout").style.gridTemplateColumns =
+      sidebarW + "px " + newEditor + "px " + divW + "px " + newPreview + "px";
+  });
+  document.addEventListener("mouseup", function() {
+    if (!dragState) return;
+    dragState = null;
+    divider.classList.remove("active");
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  });
 
   document.getElementById("add-btn").addEventListener("click", addDashboard);
   document.getElementById("del-btn").addEventListener("click", deleteDashboard);

@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.18.1 (2026-06-28)
+- **Fixed:** Fixed-grid view uses absolute positioning when `container_width` + `container_height` are set — cards no longer force-squeeze into CSS Grid 1fr rows, letting tile content (numeric-input, etc.) size naturally.
+- **Fixed:** Weather condition `partlycloudy` now displays as "Partly cloudy" instead of the raw HA state string — added `_CONDITION_DISPLAY` lookup map in `renderer.py`.
+- **Fixed:** Weather forecast cards render forecast data in config preview mode — dummy entity states injected for weather entities absent from real HA connection.
+- **Fixed:** Preview iframe (srcdoc) no longer spews HTMX `Failed to construct 'URL': Invalid URL` errors — HTMX scripts stripped from static preview HTML; `sse-connect`/`hx-ext` attributes also removed.
+- **Fixed:** Null reference errors in dimmer and cover JS modals — added early `if(!m)return;` guards when modal elements are absent.
+- **Fixed:** `closeBtn.addEventListener on null` error in dimmer/cover popup JS — guards added.
+- **Fixed:** `max-width: none` on `.lv-view` when `container_width` is set — overrides CSS clamp that squeezed fixed-width containers.
+- **Added:** Draggable divider between editor and preview panes in config screen — `grid-template-columns: 200px 1fr 8px 1fr` with mouse drag JS on divider element.
+- **Added:** Preview viewport boundaries visually indicated — darker body background and dashed outline around `.lv-view` in config preview.
+- **Added:** `numeric-input` feature support in entities card entity rows — when a dict entity has `features`, delegates to `_render_features` for inline controls.
+
 ## v0.18.0 (2026-06-28)
 - **Added:** `fixed-grid` view type — declarative view-level row/column grid. View defines `grid.rows` and `grid.columns`. Each card specifies `grid_layout` with `x`, `y`, `width`, `height` (0-indexed from top-left). Cards without `grid_layout` auto-place. Supports `lightdash.container_height` for evenly-spaced rows or automatic aspect-ratio sizing.
 - **Added:** `GridLayout` and `FixedGrid` dataclasses in `app/models.py`.
