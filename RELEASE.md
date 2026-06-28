@@ -1,4 +1,4 @@
-# Release Notes for v0.18.1 (2026-06-28) — v0.19.0 (alarm panel)
+# Release Notes for v0.18.1 (2026-06-28) — v0.19.1 (alarm panel)
 
 A batch of layout fixes, preview improvements, and a new alarm control panel card: the fixed-grid view keeps cards from being squashed, weather cards show up in previews, a draggable divider lets you resize the config panes, and you can now arm and disarm your Alarmo security system directly from a LightDash dashboard.
 
