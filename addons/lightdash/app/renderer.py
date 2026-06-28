@@ -692,6 +692,13 @@ def _prefetch_icons(view: View) -> None:
         if c.type == "weather-forecast":
             for cond_icon in _WEATHER_CONDITION_ICONS.values():
                 needed.add(cond_icon)
+        if c.type == "alarm-panel":
+            for alarm_icon in (
+                "shield-off", "shield-home", "shield-lock", "shield-moon",
+                "shield-airplane", "shield-check", "bell-ring", "shield-sync",
+                "shield-alert", "backspace-outline", "close", "alert",
+            ):
+                needed.add(alarm_icon)
         if c.type in ("entities", "glance"):
             for ent in (c.get("entities") or []):
                 if isinstance(ent, str):
@@ -956,14 +963,12 @@ def _render_alarm_panel(card: Card, indent: int = 2) -> str:
     label = state_labels.get(current_state, current_state)
     i = _SP * indent
 
-    # Header: badge icon + name + state label
+    # Header — centred: icon badge, name, state label
     header = (
         i + _SP + '<div class="alarm-header">\n'
-        + i + _SP * 2 + '<div class="alarm-badge" style="color:' + color + '">' + _icon_html(icon) + '</div>\n'
-        + i + _SP * 2 + '<div class="alarm-info">\n'
-        + i + _SP * 3 + '<div class="alarm-name">' + html.escape(str(name)) + '</div>\n'
-        + i + _SP * 3 + '<div class="alarm-state">' + html.escape(str(label)) + '</div>\n'
-        + i + _SP * 2 + '</div>\n'
+        + i + _SP * 2 + '<div class="alarm-badge">' + _icon_html(icon) + '</div>\n'
+        + i + _SP * 2 + '<div class="alarm-name">' + html.escape(str(name)) + '</div>\n'
+        + i + _SP * 2 + '<div class="alarm-state">' + html.escape(str(label)) + '</div>\n'
         + i + _SP + '</div>'
     )
 
@@ -1035,18 +1040,20 @@ def _render_alarm_panel(card: Card, indent: int = 2) -> str:
     if actions:
         actions = i + _SP + '<div class="alarm-actions">\n' + actions + i + _SP + '</div>\n'
 
-    # Code input + keypad
+    # Code section — dot indicators + text input (hidden when keypad shown)
     safe_id = eid.replace(".", "-")
+    input_cls = "alarm-code-input-field hidden" if show_keypad else "alarm-code-input-field"
     code_section = (
         _h("input", {"type": "hidden", "name": "code", "class": "alarm-code-hidden", "id": "alarm-code-" + safe_id, "value": ""}, "", indent + 1)
         + '\n' + i + _SP + '<div class="alarm-code-section">\n'
-        + i + _SP * 2 + '<div class="alarm-code-display" style="visibility:hidden"></div>\n'
-        + i + _SP * 2 + '<input type="password" class="alarm-code-input-field" placeholder="Enter code" inputmode="numeric">\n'
+        + i + _SP * 2 + '<div class="alarm-code-dots"></div>\n'
+        + i + _SP * 2 + '<input type="password" class="' + input_cls + '" placeholder="Enter code" inputmode="numeric">\n'
         + i + _SP + '</div>'
     )
 
     keypad = ""
     if show_keypad:
+        # Classic 3-column numpad: 1-9, then 0, backspace, clear
         keys = ["1","2","3","4","5","6","7","8","9","0","backspace","clear"]
         kbtns = ""
         for k in keys:
@@ -1072,11 +1079,17 @@ def _render_alarm_panel(card: Card, indent: int = 2) -> str:
         )
 
     api_url = _url("/api/alarm-action/" + html.escape(_dashboard_name) + "/" + html.escape(_view_path))
-    hidden_eid = _h("input", {"type": "hidden", "name": "entity_id", "value": eid}, "", indent + 1)
+    card_url = _url("/api/alarm-card/" + html.escape(_dashboard_name) + "/" + html.escape(_view_path) + "?entity=" + html.escape(eid))
+    sse_event = "entity_" + eid.replace(".", "_")
+    hidden_eid = _h("input", {"type": "hidden", "name": "entity_id", "value": eid}, "", indent + 2)
     return (
-        i + '<form class="alarm-panel"'
-        + ' hx-post="' + api_url + '" hx-swap="outerHTML" hx-target="this">\n'
-        + i + _SP + '<div class="alarm-card">\n'
+        i + '<div class="alarm-panel-wrap"'
+        + ' hx-get="' + card_url + '"'
+        + ' hx-trigger="sse:' + sse_event + '"'
+        + ' hx-swap="outerHTML">\n'
+        + i + _SP + '<form class="alarm-panel"'
+        + ' hx-post="' + api_url + '" hx-swap="outerHTML" hx-target="closest .alarm-panel-wrap">\n'
+        + i + _SP * 2 + '<div class="alarm-card" style="--alarm-color:' + color + '">\n'
         + hidden_eid + '\n'
         + header + '\n'
         + messages
@@ -1084,8 +1097,9 @@ def _render_alarm_panel(card: Card, indent: int = 2) -> str:
         + code_section + '\n'
         + keypad
         + options
-        + i + _SP + '</div>\n'
-        + i + '</form>'
+        + i + _SP * 2 + '</div>\n'
+        + i + _SP + '</form>\n'
+        + i + '</div>'
     )
 
 

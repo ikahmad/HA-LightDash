@@ -13,6 +13,8 @@ A batch of layout fixes, preview improvements, and a new alarm control panel car
 - **Dimmer and cover popup crashes fixed:** JavaScript now safely checks for the modal element before attaching event listeners.
 - **Fixed-grid cells fill their row height:** Cards now get an explicit `height` that matches their grid cell size.
 - **Fridge config — today-card height tuned:** The agenda card now uses `height: 345` with its grid span reduced to 4 rows.
+- **Alarm panel lives in real time:** The card now auto-updates when the alarm state changes externally — if someone arms the alarm from a keypad or the HA app, the card refreshes automatically via SSE.
+- **Refined alarm panel design:** Larger centred state badge with a subtle coloured glow, a proper 3-column numpad (1-9 + 0/backspace/clear), dot indicators for entered codes, and rounded pill-shaped action buttons — all respecting your chosen theme's `--radius`, `--card-bg`, and `--control-bg` variables.
 
 # Release Notes for v0.18.0 (2026-06-28)
 

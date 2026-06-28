@@ -1288,123 +1288,152 @@ html, body {
 .today-card.is-tappable:active { filter: brightness(0.9); }
 
 /* ---- Alarm Panel ---- */
+.alarm-panel-wrap { display: contents; }
 form.alarm-panel { display: contents; }
 form.alarm-panel .alarm-card {
-  display: flex; flex-direction: column; gap: 10px;
-  padding: 12px;
-  border-radius: var(--card-radius, 8px);
+  --alarm-color: #888;
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 16px 16px 20px;
+  border-radius: var(--radius, 8px);
+  border: var(--card-border, none);
   background: var(--card-bg, #1c1c1c);
   color: var(--text, #ddd);
   font-family: var(--font, inherit);
-  container-type: inline-size;
 }
+
+/* Header — centred badge, name, coloured state label */
 .alarm-header {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 6px; padding: 8px 0 4px;
 }
 .alarm-badge {
-  flex-shrink: 0;
-  width: 48px; height: 48px;
+  width: 64px; height: 64px;
   display: flex; align-items: center; justify-content: center;
+  color: var(--alarm-color);
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--alarm-color) 50%, transparent));
 }
-.alarm-badge svg { width: 40px; height: 40px; fill: currentColor; }
-.alarm-info { flex: 1; min-width: 0; }
-.alarm-name { font-size: 1.1rem; font-weight: 500; }
-.alarm-state { font-size: 0.9rem; font-weight: 600; }
+.alarm-badge svg { width: 52px; height: 52px; fill: currentColor; }
+.alarm-name {
+  font-size: 0.85rem; font-weight: 500;
+  color: var(--text-faint, #999);
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.alarm-state {
+  font-size: 1.35rem; font-weight: 700;
+  color: var(--alarm-color);
+  letter-spacing: 0.01em;
+}
 
+/* Divider between header and actions */
+.alarm-header + .alarm-actions,
+.alarm-header + .alarm-messages { border-top: 1px solid var(--divider, rgba(255,255,255,0.1)); padding-top: 12px; }
+
+/* Diagnostic messages */
 .alarm-messages {
   display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
-  padding: 8px;
-  border-radius: 6px;
-  background: rgba(255,152,0,0.15);
-  border: 1px solid rgba(255,152,0,0.3);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm, 6px);
+  background: rgba(255,152,0,0.12);
+  border: 1px solid rgba(255,152,0,0.28);
   font-size: 0.8rem;
+  color: var(--text, #ddd);
 }
 .alarm-messages.bypassed {
-  background: rgba(33,150,243,0.10);
-  border-color: rgba(33,150,243,0.25);
+  background: rgba(33,150,243,0.08);
+  border-color: rgba(33,150,243,0.22);
 }
-.alarm-msg-icon svg { width: 16px; height: 16px; fill: var(--text, #ddd); }
+.alarm-messages svg { width: 15px; height: 15px; fill: currentColor; flex-shrink: 0; }
 .alarm-sensor-badge {
   display: inline-flex; align-items: center; gap: 4px;
-  padding: 2px 6px; border-radius: 4px;
-  background: rgba(0,0,0,0.3);
-  font-size: 0.75rem;
-  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--control-bg, rgba(255,255,255,0.1));
+  border: var(--control-border, none);
+  font-size: 0.75rem; white-space: nowrap;
 }
-.alarm-sensor-badge svg { width: 14px; height: 14px; flex-shrink:0; }
+.alarm-sensor-badge svg { width: 13px; height: 13px; }
 
+/* Arm / disarm action buttons */
 .alarm-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 8px;
 }
 .alarm-action-btn {
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 10px 8px 8px;
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 6px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; padding: 10px 6px;
+  border: var(--control-border, 1px solid rgba(255,255,255,0.12));
+  border-radius: var(--radius-sm, 8px);
   background: var(--control-bg, rgba(255,255,255,0.08));
   color: var(--text, #ddd);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.8rem;
-  transition: background .15s;
+  cursor: pointer; font-family: inherit; font-size: 0.78rem;
+  transition: filter .15s, opacity .15s;
+  -webkit-user-select: none; user-select: none;
 }
-.alarm-action-btn:hover { background: rgba(255,255,255,0.12); }
-.alarm-action-btn:active { background: rgba(255,255,255,0.06); }
+.alarm-action-btn:hover { filter: brightness(1.15); }
+.alarm-action-btn:active { opacity: 0.7; }
 .alarm-action-btn svg { width: 22px; height: 22px; fill: currentColor; }
-.alarm-action-btn.disarm { background: rgba(244,67,54,0.2); border-color: rgba(244,67,54,0.4); }
-.alarm-action-btn.disarm:hover { background: rgba(244,67,54,0.3); }
+.alarm-action-btn.disarm {
+  background: color-mix(in srgb, var(--alarm-color) 18%, transparent);
+  border-color: color-mix(in srgb, var(--alarm-color) 40%, transparent);
+  color: var(--alarm-color);
+}
 
-.alarm-code-section { display: flex; flex-direction: column; gap: 4px; }
+/* Code dot display */
+.alarm-code-section { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.alarm-code-dots {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 18px;
+}
+.alarm-code-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 2px solid var(--text-faint, #888);
+  background: transparent;
+  transition: background .1s, border-color .1s;
+}
+.alarm-code-dot.filled {
+  background: var(--alarm-color);
+  border-color: var(--alarm-color);
+}
 .alarm-code-input-field {
-  width: 100%; padding: 8px 10px;
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 6px;
-  background: rgba(0,0,0,0.3);
-  color: var(--text, #ddd);
-  font-family: inherit;
-  font-size: 1.1rem;
-  letter-spacing: 0.3em;
-  text-align: center;
+  /* Visible only when no keypad */
+  width: 100%; padding: 8px 12px;
+  border: var(--control-border, 1px solid rgba(255,255,255,0.15));
+  border-radius: var(--radius-sm, 6px);
+  background: var(--control-bg, rgba(0,0,0,0.2));
+  color: var(--text, #ddd); font-family: inherit;
+  font-size: 1.1rem; letter-spacing: 0.3em; text-align: center;
 }
-.alarm-code-input-field:focus { outline: none; border-color: rgba(255,255,255,0.3); }
-.alarm-code-display {
-  text-align: center; font-size: 1.4rem;
-  letter-spacing: 0.5em;
-  color: var(--text, #ddd);
-  min-height: 1.4em;
-}
+.alarm-code-input-field:focus { outline: none; border-color: var(--alarm-color); }
+.alarm-code-input-field.hidden { display: none; }
 
+/* Keypad — 3-column numpad layout */
 .alarm-keypad {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 6px; width: 100%; max-width: 280px; margin: 0 auto;
 }
 .alarm-key {
   display: flex; align-items: center; justify-content: center;
-  aspect-ratio: 1.6;
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 6px;
+  aspect-ratio: 1.4;
+  border: var(--control-border, 1px solid rgba(255,255,255,0.12));
+  border-radius: var(--radius-sm, 8px);
   background: var(--control-bg, rgba(255,255,255,0.08));
   color: var(--text, #ddd);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 1.05rem;
-  transition: background .15s;
+  cursor: pointer; font-family: inherit; font-size: 1.3rem; font-weight: 500;
+  transition: filter .1s, opacity .1s;
   -webkit-user-select: none; user-select: none;
 }
-.alarm-key:hover { background: rgba(255,255,255,0.12); }
-.alarm-key:active { background: rgba(255,255,255,0.06); }
+.alarm-key:hover { filter: brightness(1.2); }
+.alarm-key:active { opacity: 0.6; }
 .alarm-key svg { width: 20px; height: 20px; fill: currentColor; }
 
+/* Arming options */
 .alarm-options {
   display: flex; flex-wrap: wrap; gap: 10px;
+  justify-content: center;
   font-size: 0.78rem;
+  border-top: 1px solid var(--divider, rgba(255,255,255,0.1));
+  padding-top: 10px;
 }
-.alarm-option {
-  display: flex; align-items: center; gap: 4px;
-  cursor: pointer;
-  color: var(--text-faint, #999);
-}
-.alarm-option input { accent-color: #1e88e5; cursor: pointer; }
+.alarm-option { display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--text-faint, #999); }
+.alarm-option input { accent-color: var(--accent, #1e88e5); cursor: pointer; }

@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.19.1 (2026-06-28)
+- **Changed:** Alarm panel CSS redesigned — uses theme CSS variables (`--radius`, `--radius-sm`, `--card-bg`, `--card-border`, `--control-bg`, `--control-border`, `--divider`, `--text-faint`, `--accent`) throughout. Centred header with large icon badge (64px) and soft state-colour glow via `drop-shadow` + `color-mix`. Keypad now 3-column classic numpad layout (1-9 + 0/backspace/clear). Action buttons use `--radius-sm` and `--control-border`.
+- **Changed:** Alarm panel header simplified — removed `alarm-info` wrapper, state colour now injected as `--alarm-color` CSS custom property on `.alarm-card`, inherited by badge, state label, disarm button, dot indicators, and code input focus ring.
+- **Changed:** Code display replaced with individual dot indicators (`.alarm-code-dots` → `.alarm-code-dot.filled`) instead of a single text span. Text password input hidden when keypad is shown.
+- **Added:** Alarm state icons prefetched via `_prefetch_icons` — all state icons (shield-off, shield-home, shield-lock, shield-moon, shield-airplane, shield-check, bell-ring, shield-sync, shield-alert) and keypad icons (backspace-outline, close, alert) added to prefetch set.
+- **Added:** SSE auto-refresh — wrapper `<div class="alarm-panel-wrap">` with `hx-get="/api/alarm-card/..." hx-trigger="sse:entity_{sanitized_eid}"` listens for entity state changes and fetches fresh card HTML. `GET /api/alarm-card/{dashboard}/{view_path:path}?entity=xx` endpoint re-renders card with fresh HA state.
+- **Added:** Alarm panel card added to showcase Controls view with custom button labels.
+
 ## v0.19.0 (2026-06-28)
 - **Added:** `alarm-panel` card type — full-featured alarm control panel for Alarmo integration. Displays state badge (icon+color+label per state), arm/disarm action buttons, numeric keypad for code entry, arming options (skip exit delay, bypass open sensors), and diagnostic messages (triggered sensors, blocking sensors, bypassed sensors).
 - **Added:** `_render_alarm_panel` renderer function in `app/renderer.py` — registered as `alarm-panel` card type with state-aware rendering, configurable state labels/colors/button icons/button order via `states` config key.

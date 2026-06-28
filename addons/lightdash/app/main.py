@@ -672,6 +672,40 @@ async def view_badge(dashboard: str, view_path: str, idx: int):
     return HTMLResponse("", status_code=404)
 
 
+@app.get("/api/alarm-card/{dashboard}/{view_path:path}")
+async def alarm_card_get(dashboard: str, view_path: str, entity: str = ""):
+    if not entity:
+        return HTMLResponse("", status_code=400)
+    dashboards = getattr(app.state, "dashboards", {})
+    d = dashboards.get(dashboard)
+    if not d:
+        return HTMLResponse("", status_code=404)
+    ha = getattr(app.state, "ha_client", None)
+    entity_states: Dict[str, Any] = {}
+    entity_icons: Dict[str, str] = {}
+    if ha and ha.is_connected:
+        states = await ha.get_states()
+        if states:
+            entity_states = {s["entity_id"]: s for s in states}
+    cfg = getattr(app.state, "config", None)
+    ha_url = cfg.ha_url if cfg else ""
+    import app.renderer as r
+    r._base_path = getattr(app.state, "base_path", "")
+    r._entity_states = entity_states
+    r._entity_icons = entity_icons
+    r._ha_url = ha_url
+    r._dashboard_name = dashboard
+    r._view_path = view_path
+    for v in d.views:
+        if v.path == view_path:
+            for card in _walk_cards(v):
+                if card.type == "alarm-panel" and card.get("entity") == entity:
+                    html = r._render_alarm_panel(card)
+                    return HTMLResponse(html, headers=_no_cache)
+            break
+    return HTMLResponse("", status_code=404)
+
+
 @app.post("/api/alarm-action/{dashboard}/{view_path:path}")
 async def alarm_action(dashboard: str, view_path: str, request: Request):
     raw = await request.body()
