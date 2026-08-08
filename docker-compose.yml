@@ -8,7 +8,7 @@ services:
       - "8001:8000"
     environment:
       HA_URL: "http://192.168.1.37:8123"
-      HA_TOKEN: "${HA_TOKEN}"
+      HA_TOKEN: "${eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI3ODgwZmQ1MWI1NDY0YTBhYjU0Y2EyNDgxYTQ0MjE2MSIsImlhdCI6MTc4NjIyODc2MywiZXhwIjoyMTAxNTg4NzYzfQ.qO131c4FwFBKTkxCDGTu5Z6fKOocXVsOTEuduY0DFms}"
     volumes:
       - lightdash_data:/data
 
