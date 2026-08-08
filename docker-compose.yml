@@ -6,6 +6,9 @@ services:
     restart: unless-stopped
     ports:
       - "8001:8000"
+    environment:
+      HA_URL: "http://192.168.1.37:8123"
+      HA_TOKEN: "${HA_TOKEN}"
     volumes:
       - lightdash_data:/data
 
